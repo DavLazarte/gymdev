@@ -1,9 +1,8 @@
 // Advanced Service Worker for Vértice Gym
-const CACHE_NAME = 'vertice-gym-v1.3'; // Incrementa esto en cada deploy
+const CACHE_NAME = 'vertice-gym-v1.4'; // Incrementa esto en cada deploy
 const URLS_TO_CACHE = [
   '/',
   '/manifest.json',
-  '/icon.svg',
   '/logo.jpeg'
 ];
 
