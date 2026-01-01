@@ -20,12 +20,15 @@ import {
   Search,
   Calendar,
   Ticket,
+  DollarSign,
+  Info,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import type { Membresia } from "@/lib/types";
 import { MembresiaDialog } from "@/components/membresia-dialog";
+import { PagoDialog } from "@/components/pago-dialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -46,9 +49,15 @@ export default function MembresiasPage() {
   const [estadoFilter, setEstadoFilter] = useState("todas");
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPagoDialogOpen, setIsPagoDialogOpen] = useState(false);
   const [editingMembresia, setEditingMembresia] = useState<Membresia | null>(
     null
   );
+  const [selectedMembresiaForPago, setSelectedMembresiaForPago] = useState<{
+    id_persona: string;
+    id_membresia: string;
+  } | null>(null);
+
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { toast } = useToast();
@@ -101,7 +110,9 @@ export default function MembresiasPage() {
         await api.createMembresia(formData);
         toast({
           title: "Asignado",
-          description: "El plan se ha asignado al socio.",
+          description: formData.registrar_pago
+            ? "Membresía asignada y pago registrado correctamente."
+            : "El plan se ha asignado al socio.",
         });
       }
       loadMembresias();
@@ -114,6 +125,24 @@ export default function MembresiasPage() {
         description:
           error.message || "Ocurrió un error al procesar la solicitud",
       });
+    }
+  };
+
+  const handleRegisterQuickPago = async (pagoData: any) => {
+    try {
+      await api.createPago(pagoData);
+      toast({
+        title: "Pago registrado",
+        description: "El pago se ha registrado correctamente.",
+      });
+      loadMembresias();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo registrar el pago.",
+        variant: "destructive",
+      });
+      throw error;
     }
   };
 
@@ -269,11 +298,38 @@ export default function MembresiasPage() {
                             {m.creditos_restantes} / {m.creditos_totales}
                           </div>
                         )}
+                        {(m.saldo_pendiente ?? 0) > 0 && (
+                          <div className="text-xs font-bold text-destructive flex items-center gap-1">
+                            <Info className="h-3 w-3" /> Debe: $
+                            {m.saldo_pendiente}
+                          </div>
+                        )}
+                        {(m.saldo_pendiente ?? 0) === 0 &&
+                          (m.monto_total ?? 0) > 0 && (
+                            <div className="text-xs font-medium text-green-600">
+                              Pagado
+                            </div>
+                          )}
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(m.estado)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="text-primary border-primary/20 hover:bg-primary/5"
+                          title="Registrar Pago"
+                          onClick={() => {
+                            setSelectedMembresiaForPago({
+                              id_persona: String(m.idpersona),
+                              id_membresia: String(m.id),
+                            });
+                            setIsPagoDialogOpen(true);
+                          }}
+                        >
+                          <DollarSign className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -310,6 +366,14 @@ export default function MembresiasPage() {
         }}
         membresia={editingMembresia || undefined}
         onSave={handleSave}
+      />
+
+      <PagoDialog
+        open={isPagoDialogOpen}
+        onOpenChange={setIsPagoDialogOpen}
+        onSave={handleRegisterQuickPago}
+        initialSocioId={selectedMembresiaForPago?.id_persona}
+        initialMembresiaId={selectedMembresiaForPago?.id_membresia}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

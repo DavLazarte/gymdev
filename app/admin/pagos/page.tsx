@@ -1,166 +1,234 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { AdminLayout } from "@/components/admin-layout"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Search, Filter, DollarSign, TrendingUp } from "lucide-react"
-import { mockPagos } from "@/lib/mock-admin-data"
-import { PagoDialog } from "@/components/pago-dialog"
-import { useToast } from "@/hooks/use-toast"
-import type { Pago } from "@/lib/types"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Plus,
+  Search,
+  Filter,
+  DollarSign,
+  TrendingUp,
+  RefreshCcw,
+  Loader2,
+  Info,
+} from "lucide-react";
+import { PagoDialog } from "@/components/pago-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
+import type { Pago } from "@/lib/types";
 
 export default function PagosPage() {
-  const [pagos, setPagos] = useState<Pago[]>(mockPagos)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterEstado, setFilterEstado] = useState<string>("todos")
-  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false)
-  const { toast } = useToast()
+  const [pagos, setPagos] = useState<any[]>([]);
+  const [deudaTotal, setDeudaTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterEstado, setFilterEstado] = useState<string>("todos");
+  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadPagos();
+  }, []);
+
+  const loadPagos = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.getPagos();
+      setPagos(response.pagos || []);
+      setDeudaTotal(response.deuda_total || 0);
+    } catch (error) {
+      console.error("Error loading pagos:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los pagos.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegisterPago = async (pagoData: any) => {
+    try {
+      await api.createPago(pagoData);
+      toast({
+        title: "Pago registrado",
+        description: "El pago se ha registrado correctamente.",
+      });
+      loadPagos();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo registrar el pago.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
 
   const filteredPagos = pagos.filter((pago) => {
-    const matchesSearch = pago.socioNombre.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter = filterEstado === "todos" || pago.estado === filterEstado
-    return matchesSearch && matchesFilter
-  })
+    const socioNombre = pago.persona?.nombre || "";
+    const matchesSearch = socioNombre
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    // For now, API doesn't have "estado" field in PagoGym, it's usually considered 'pagado' if exists
+    // But we can filter if needed later
+    return matchesSearch;
+  });
 
-  const handleRegisterPago = (pago: Omit<Pago, "id">) => {
-    const newPago = {
-      ...pago,
-      id: String(Date.now()),
-    }
-    setPagos([newPago, ...pagos])
-    setIsRegisterDialogOpen(false)
-    toast({
-      title: "Pago registrado",
-      description: `Pago de ${pago.socioNombre} registrado correctamente.`,
-    })
-  }
+  const totalIngresos = pagos.reduce((sum, p) => sum + Number(p.monto), 0);
 
-  const totalIngresos = pagos.filter((p) => p.estado === "pagado").reduce((sum, p) => sum + p.monto, 0)
-  const pagosPendientes = pagos.filter((p) => p.estado === "pendiente").length
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
   const ingresosEsteMes = pagos
-    .filter(
-      (p) =>
-        p.estado === "pagado" &&
-        new Date(p.fecha).getMonth() === new Date().getMonth() &&
-        new Date(p.fecha).getFullYear() === new Date().getFullYear(),
-    )
-    .reduce((sum, p) => sum + p.monto, 0)
-
-  const getEstadoBadge = (estado: Pago["estado"]) => {
-    const variants = {
-      pagado: "default",
-      pendiente: "secondary",
-      vencido: "destructive",
-    }
-    const labels = {
-      pagado: "Pagado",
-      pendiente: "Pendiente",
-      vencido: "Vencido",
-    }
-    return <Badge variant={variants[estado] as any}>{labels[estado]}</Badge>
-  }
+    .filter((p) => {
+      const d = new Date(p.fecha_pago);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    })
+    .reduce((sum, p) => sum + Number(p.monto), 0);
 
   return (
-    <AdminLayout userName="Roberto Díaz">
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Pagos</h1>
-            <p className="text-sm text-muted-foreground">Gestión de pagos y cobros</p>
-          </div>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Pagos</h1>
+          <p className="text-sm text-muted-foreground">
+            Gestión de pagos y cobros vinculados a membresías
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={loadPagos}
+            disabled={isLoading}
+          >
+            <RefreshCcw
+              className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+            />
+          </Button>
           <Button onClick={() => setIsRegisterDialogOpen(true)}>
             <Plus className="h-4 w-4" />
             Registrar Pago
           </Button>
         </div>
+      </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <DollarSign className="h-4 w-4" />
-                Ingresos Totales
-              </CardTitle>
-              <CardDescription>Pagos completados</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-primary">€{totalIngresos.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">{pagos.filter((p) => p.estado === "pagado").length} pagos</p>
-            </CardContent>
-          </Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <DollarSign className="h-4 w-4" />
+              Ingresos Totales
+            </CardTitle>
+            <CardDescription>Pagos históricos registrados</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-primary">
+              ${totalIngresos.toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {pagos.length} pagos registrados
+            </p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <TrendingUp className="h-4 w-4" />
-                Este Mes
-              </CardTitle>
-              <CardDescription>Ingresos mensuales</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-primary">€{ingresosEsteMes.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">ingresos del mes actual</p>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <TrendingUp className="h-4 w-4" />
+              Este Mes
+            </CardTitle>
+            <CardDescription>Ingresos mensuales</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-primary">
+              ${ingresosEsteMes.toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Ingresos del mes actual
+            </p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Pagos Pendientes</CardTitle>
-              <CardDescription>Por cobrar</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-500">{pagosPendientes}</div>
-              <p className="text-xs text-muted-foreground">pagos pendientes</p>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Info className="h-4 w-4" />
+              Deuda Pendiente
+            </CardTitle>
+            <CardDescription>Saldos sin cobrar</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-destructive">
+              $
+              {deudaTotal.toLocaleString("es-ES", { minimumFractionDigits: 2 })}
+            </div>
+            <p className="text-xs text-muted-foreground">Total por cobrar</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por socio..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
         </div>
+      </div>
 
-        <div className="flex flex-col gap-4 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por socio..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
+      <div className="rounded-lg border border-border bg-card">
+        {isLoading ? (
+          <div className="flex h-64 items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-          <Select value={filterEstado} onValueChange={setFilterEstado}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <Filter className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Filtrar por estado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              <SelectItem value="pagado">Pagados</SelectItem>
-              <SelectItem value="pendiente">Pendientes</SelectItem>
-              <SelectItem value="vencido">Vencidos</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="rounded-lg border border-border bg-card">
+        ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Socio</TableHead>
-                <TableHead>Concepto</TableHead>
+                <TableHead>Membresía</TableHead>
                 <TableHead>Monto</TableHead>
                 <TableHead>Método</TableHead>
-                <TableHead>Estado</TableHead>
+                <TableHead>Obs.</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredPagos.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center">
-                    <p className="text-sm text-muted-foreground">No se encontraron pagos</p>
+                    <p className="text-sm text-muted-foreground">
+                      No se encontraron pagos
+                    </p>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -168,37 +236,53 @@ export default function PagosPage() {
                   <TableRow key={pago.id}>
                     <TableCell>
                       <span className="text-sm text-foreground">
-                        {new Date(pago.fecha).toLocaleDateString("es-ES")}
+                        {new Date(pago.fecha_pago).toLocaleDateString("es-ES")}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className="font-medium text-foreground">{pago.socioNombre}</span>
+                      <span className="font-medium text-foreground">
+                        {pago.persona?.nombre}
+                      </span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm text-foreground">{pago.concepto}</span>
+                      <Badge variant="outline">
+                        {pago.membresia?.plan?.nombre || "N/A"}
+                      </Badge>
                     </TableCell>
                     <TableCell>
-                      <span className="font-semibold text-primary">€{pago.monto}</span>
+                      <span className="font-semibold text-primary">
+                        ${pago.monto}
+                      </span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm capitalize text-muted-foreground">{pago.metodoPago}</span>
+                      <span className="text-sm capitalize text-muted-foreground">
+                        {pago.metodo_pago}
+                      </span>
                     </TableCell>
-                    <TableCell>{getEstadoBadge(pago.estado)}</TableCell>
+                    <TableCell>
+                      <span className="text-xs text-muted-foreground truncate max-w-[150px] inline-block">
+                        {pago.observaciones || "-"}
+                      </span>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
-        </div>
-
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            Mostrando {filteredPagos.length} de {pagos.length} pagos
-          </span>
-        </div>
+        )}
       </div>
 
-      <PagoDialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen} onSave={handleRegisterPago} />
-    </AdminLayout>
-  )
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>
+          Mostrando {filteredPagos.length} de {pagos.length} pagos
+        </span>
+      </div>
+
+      <PagoDialog
+        open={isRegisterDialogOpen}
+        onOpenChange={setIsRegisterDialogOpen}
+        onSave={handleRegisterPago}
+      />
+    </div>
+  );
 }

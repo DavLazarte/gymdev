@@ -1,51 +1,94 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { AdminLayout } from "@/components/admin-layout"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Search, Calendar } from "lucide-react"
-import { mockAsistencias } from "@/lib/mock-admin-data"
-import { AsistenciaDialog } from "@/components/asistencia-dialog"
-import { useToast } from "@/hooks/use-toast"
-import type { Asistencia } from "@/lib/types"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Plus, Search, Calendar, Loader2 } from "lucide-react";
+import { AsistenciaDialog } from "@/components/asistencia-dialog";
+import { useToast } from "@/hooks/use-toast";
+import type { Asistencia } from "@/lib/types";
+import { api } from "@/lib/api";
 
 export default function AsistenciasPage() {
-  const [asistencias, setAsistencias] = useState<Asistencia[]>(mockAsistencias)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false)
-  const { toast } = useToast()
+  const [asistencias, setAsistencias] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadAsistencias();
+  }, []);
+
+  const loadAsistencias = async () => {
+    setIsLoading(true);
+    try {
+      const data = await api.getAsistencias();
+      setAsistencias(data);
+    } catch (error) {
+      console.error("Error cargando asistencias:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegisterAsistencia = async (data: any) => {
+    try {
+      await api.marcarAsistencia({
+        id_persona: data.id_persona,
+        id_clase_gym: data.id_clase_gym,
+      });
+      toast({
+        title: "Asistencia registrada",
+        description: "La asistencia se ha guardado correctamente.",
+      });
+      loadAsistencias();
+      setIsRegisterDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "No se pudo registrar la asistencia.",
+      });
+    }
+  };
 
   const filteredAsistencias = asistencias.filter((asistencia) =>
-    asistencia.socioNombre.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+    asistencia.persona?.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const handleRegisterAsistencia = (asistencia: Omit<Asistencia, "id">) => {
-    const newAsistencia = {
-      ...asistencia,
-      id: String(Date.now()),
-    }
-    setAsistencias([newAsistencia, ...asistencias])
-    setIsRegisterDialogOpen(false)
-    toast({
-      title: "Asistencia registrada",
-      description: `Entrada de ${asistencia.socioNombre} registrada correctamente.`,
-    })
-  }
-
-  const asistenciasHoy = asistencias.filter((a) => a.fecha === new Date().toISOString().split("T")[0])
-  const asistenciasSemana = asistencias.length
+  const asistenciasHoy = asistencias.filter(
+    (a) =>
+      new Date(a.fecha_asistencia).toISOString().split("T")[0] ===
+      new Date().toISOString().split("T")[0]
+  );
+  const asistenciasSemana = asistencias.length;
 
   return (
-    <AdminLayout userName="Roberto Díaz">
+    <>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Asistencias</h1>
-            <p className="text-sm text-muted-foreground">Registro y seguimiento de asistencia</p>
+            <p className="text-sm text-muted-foreground">
+              Registro y seguimiento de asistencia
+            </p>
           </div>
           <Button onClick={() => setIsRegisterDialogOpen(true)}>
             <Plus className="h-4 w-4" />
@@ -60,8 +103,12 @@ export default function AsistenciasPage() {
               <CardDescription>Asistencias registradas</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary">{asistenciasHoy.length}</div>
-              <p className="text-xs text-muted-foreground">visitas al gimnasio</p>
+              <div className="text-3xl font-bold text-primary">
+                {asistenciasHoy.length}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                visitas al gimnasio
+              </p>
             </CardContent>
           </Card>
 
@@ -71,8 +118,12 @@ export default function AsistenciasPage() {
               <CardDescription>Total de asistencias</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary">{asistenciasSemana}</div>
-              <p className="text-xs text-muted-foreground">asistencias registradas</p>
+              <div className="text-3xl font-bold text-primary">
+                {asistenciasSemana}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                asistencias registradas
+              </p>
             </CardContent>
           </Card>
 
@@ -82,8 +133,12 @@ export default function AsistenciasPage() {
               <CardDescription>Últimos 7 días</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary">{Math.round(asistenciasSemana / 7)}</div>
-              <p className="text-xs text-muted-foreground">asistencias por día</p>
+              <div className="text-3xl font-bold text-primary">
+                {Math.round(asistenciasSemana / 7)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                asistencias por día
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -111,37 +166,62 @@ export default function AsistenciasPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAsistencias.length === 0 ? (
+              {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center">
-                    <p className="text-sm text-muted-foreground">No se encontraron asistencias</p>
+                    <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+                  </TableCell>
+                </TableRow>
+              ) : filteredAsistencias.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      No se encontraron asistencias
+                    </p>
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredAsistencias.map((asistencia) => (
                   <TableRow key={asistencia.id}>
                     <TableCell>
-                      <span className="font-medium text-foreground">{asistencia.socioNombre}</span>
+                      <span className="font-medium text-foreground">
+                        {asistencia.persona?.nombre}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 text-sm text-foreground">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
-                        {new Date(asistencia.fecha).toLocaleDateString("es-ES")}
+                        {new Date(
+                          asistencia.fecha_asistencia
+                        ).toLocaleDateString("es-ES")}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm font-medium text-primary">{asistencia.horaEntrada}</span>
+                      <span className="text-sm font-medium text-primary">
+                        {new Date(
+                          asistencia.fecha_asistencia
+                        ).toLocaleTimeString("es-ES", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm text-muted-foreground">{asistencia.horaSalida || "-"}</span>
+                      <span className="text-sm text-muted-foreground">-</span>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={asistencia.tipo === "clase" ? "default" : "secondary"}>
-                        {asistencia.tipo === "clase" ? "Clase" : "Libre"}
+                      <Badge
+                        variant={
+                          asistencia.id_clase_gym ? "default" : "secondary"
+                        }
+                      >
+                        {asistencia.id_clase_gym ? "Clase" : "Libre"}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm text-foreground">{asistencia.claseNombre || "-"}</span>
+                      <span className="text-sm text-foreground">
+                        {asistencia.clase?.nombre || "-"}
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))
@@ -152,7 +232,8 @@ export default function AsistenciasPage() {
 
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
-            Mostrando {filteredAsistencias.length} de {asistencias.length} asistencias
+            Mostrando {filteredAsistencias.length} de {asistencias.length}{" "}
+            asistencias
           </span>
         </div>
       </div>
@@ -162,6 +243,6 @@ export default function AsistenciasPage() {
         onOpenChange={setIsRegisterDialogOpen}
         onSave={handleRegisterAsistencia}
       />
-    </AdminLayout>
-  )
+    </>
+  );
 }

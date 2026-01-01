@@ -19,11 +19,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader2, CalendarIcon, Info, Search } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Loader2, CalendarIcon, Info, Search, CreditCard } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Membresia, Socio, Plan } from "@/lib/types";
 import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { Separator } from "@/components/ui/separator";
 
 interface MembresiaDialogProps {
   open: boolean;
@@ -49,6 +51,11 @@ export function MembresiaDialog({
     id_socio: "",
     id_plan: "",
     fecha_inicio: format(new Date(), "yyyy-MM-dd"),
+    // Campos de pago
+    registrar_pago: false,
+    metodo_pago: "efectivo",
+    monto_pago: "",
+    observaciones_pago: "",
   });
 
   const [socioSearch, setSocioSearch] = useState("");
@@ -77,16 +84,34 @@ export function MembresiaDialog({
         fecha_inicio: membresia.fecha_inicio
           ? format(new Date(membresia.fecha_inicio), "yyyy-MM-dd")
           : format(new Date(), "yyyy-MM-dd"),
+        registrar_pago: false,
+        metodo_pago: "efectivo",
+        monto_pago: "",
+        observaciones_pago: "",
       });
     } else {
       setFormData({
         id_socio: initialSocioId || "",
         id_plan: "",
         fecha_inicio: format(new Date(), "yyyy-MM-dd"),
+        registrar_pago: false,
+        metodo_pago: "efectivo",
+        monto_pago: "",
+        observaciones_pago: "",
       });
     }
     setSocioSearch(""); // Reset search on open
   }, [membresia, initialSocioId, open]);
+
+  // Actualizar monto si cambia el plan
+  useEffect(() => {
+    if (selectedPlan && !membresia) {
+      setFormData((prev) => ({
+        ...prev,
+        monto_pago: selectedPlan.precio.toString(),
+      }));
+    }
+  }, [selectedPlan, membresia]);
 
   const fetchData = async () => {
     setIsFetchingData(true);
@@ -156,7 +181,7 @@ export function MembresiaDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {membresia ? "Editar Membresía" : "Asignar Membresía"}
@@ -265,6 +290,83 @@ export function MembresiaDialog({
               </div>
             )}
 
+            {!membresia && (
+              <>
+                <Separator className="my-2" />
+                <div className="space-y-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-primary" />
+                      <Label
+                        htmlFor="registrar_pago"
+                        className="font-semibold cursor-pointer"
+                      >
+                        Registrar cobro inicial
+                      </Label>
+                    </div>
+                    <Switch
+                      id="registrar_pago"
+                      checked={formData.registrar_pago}
+                      onCheckedChange={(val) =>
+                        setFormData({ ...formData, registrar_pago: val })
+                      }
+                    />
+                  </div>
+
+                  {formData.registrar_pago && (
+                    <div className="grid gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="grid gap-1">
+                        <Label htmlFor="metodo_pago" className="text-xs">
+                          Método de pago
+                        </Label>
+                        <Select
+                          value={formData.metodo_pago}
+                          onValueChange={(val) =>
+                            setFormData({ ...formData, metodo_pago: val })
+                          }
+                        >
+                          <SelectTrigger
+                            id="metodo_pago"
+                            className="h-8 text-xs"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="efectivo">Efectivo</SelectItem>
+                            <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                            <SelectItem value="transferencia">
+                              Transferencia
+                            </SelectItem>
+                            <SelectItem value="mercadopago">
+                              Mercado Pago
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-1">
+                        <Label htmlFor="monto_pago" className="text-xs">
+                          Monto cobrado
+                        </Label>
+                        <Input
+                          id="monto_pago"
+                          type="number"
+                          className="h-8 text-xs"
+                          value={formData.monto_pago}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              monto_pago: e.target.value,
+                            })
+                          }
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
             <DialogFooter className="pt-4">
               <Button
                 type="button"
@@ -274,16 +376,19 @@ export function MembresiaDialog({
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button
+                type="submit"
+                disabled={isLoading || !formData.id_plan || !formData.id_socio}
+              >
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Asignando...
+                    {membresia ? "Actualizando..." : "Asignando..."}
                   </>
                 ) : membresia ? (
                   "Actualizar"
                 ) : (
-                  "Asignar Plan"
+                  "Asignar y Cobrar"
                 )}
               </Button>
             </DialogFooter>

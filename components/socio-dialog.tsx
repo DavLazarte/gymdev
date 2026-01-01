@@ -201,7 +201,11 @@ export function SocioDialog({
                   id="crearUsuario"
                   checked={formData.crearUsuario}
                   onCheckedChange={(checked) =>
-                    setFormData({ ...formData, crearUsuario: checked })
+                    setFormData({
+                      ...formData,
+                      crearUsuario: checked,
+                      password: checked ? formData.password : "", // Clear password when unchecked
+                    })
                   }
                 />
               </div>

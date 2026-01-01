@@ -47,7 +47,9 @@ export default function ClientDashboardPage() {
 
       // Cargar reservas (solo activas para hoy/futuro)
       const resData = await api.getReservas();
-      setReservations(resData.slice(0, 3));
+      const today = new Date().toISOString().split("T")[0];
+      const futureReservas = resData.filter((r) => r.fecha_reserva >= today);
+      setReservations(futureReservas.slice(0, 3));
     } catch (error) {
       console.error("Error loading profile:", error);
     } finally {

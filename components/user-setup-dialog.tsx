@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -38,10 +38,13 @@ export function UserSetupDialog({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Update email if socioEmail changes
-  useState(() => {
-    setEmail(socioEmail);
-  });
+  // Sync email and reset password when dialog opens or socio changes
+  useEffect(() => {
+    if (open) {
+      setEmail(socioEmail || "");
+      setPassword("");
+    }
+  }, [open, socioEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

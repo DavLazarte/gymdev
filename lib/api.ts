@@ -264,6 +264,33 @@ class ApiClient {
   async marcarAsistencia(data: { id_persona: string; id_clase_gym?: string; id_reserva?: string }) {
     return this.post<{ message: string; asistencia: any }>("/asistencias", data)
   }
+
+  async getAsistencias() {
+    const response = await this.get<{ asistencias: any[] }>("/asistencias")
+    return response.asistencias
+  }
+
+  // Pagos
+  async getPagos(params?: { id_persona?: string; search?: string }) {
+    const urlParams = new URLSearchParams()
+    if (params?.id_persona) urlParams.append("id_persona", params.id_persona)
+    if (params?.search) urlParams.append("search", params.search)
+    
+    return this.get<{ pagos: any[]; deuda_total?: number }>(
+      `/pagos-gym${urlParams.toString() ? `?${urlParams.toString()}` : ""}`
+    )
+  }
+
+  async createPago(data: { 
+    id_persona: string; 
+    id_membresia: string; 
+    monto: number; 
+    metodo_pago: string; 
+    fecha_pago: string;
+    observaciones?: string;
+  }) {
+    return this.post<{ message: string; pago: any }>("/pagos-gym", data)
+  }
 }
 
 export const api = new ApiClient(API_URL);

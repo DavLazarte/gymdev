@@ -29,6 +29,9 @@ export interface Membresia {
   creditos_totales?: number
   creditos_restantes?: number
   estado: "activa" | "vencida" | "por_vencer" | "cancelada"
+  monto_total?: number
+  total_pagado?: number
+  saldo_pendiente?: number
   socio?: Socio
   plan?: Plan
 }
@@ -96,11 +99,13 @@ export interface Pago {
   id: string
   socioId: string
   socioNombre: string
-  concepto: string
+  id_membresia: string
+  concepto?: string // No longer strictly required if derived or optional
   monto: number
-  metodoPago: "efectivo" | "tarjeta" | "transferencia"
-  estado: "pagado" | "pendiente" | "vencido"
+  metodoPago: string
+  estado?: "pagado" | "pendiente" | "vencido"
   fecha: string
+  observaciones?: string
   comprobante?: string
 }
 export interface ClassSlot {
