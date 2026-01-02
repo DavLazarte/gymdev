@@ -152,6 +152,10 @@ class ApiClient {
     return this.get<{ socio: any }>("/perfil")
   }
 
+  async updateProfile(data: any) {
+    return this.post<{ message: string; socio: any }>("/perfil", data)
+  }
+
   // Instructores (reutiliza endpoints de socios)
   async getInstructores(search?: string) {
     const params = new URLSearchParams()

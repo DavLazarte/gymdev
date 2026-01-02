@@ -46,7 +46,11 @@ export default function BookClassPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4 text-foreground">
-      <AppHeader userName={user.name} userRole="client" />
+      <AppHeader
+        userName={user.name}
+        userRole="client"
+        userImage={(user as any).foto}
+      />
 
       <main className="container mx-auto max-w-2xl space-y-6 p-4">
         <div className="flex items-center gap-3">
