@@ -119,7 +119,7 @@ export interface ClassSlot {
   duracion: number
   capacidad: number
   inscritos: number
-  alumnos: string[]
+  alumnos: { nombre: string; foto?: string }[]
   disponibles: number
   reservada: boolean
   estado_clase: string

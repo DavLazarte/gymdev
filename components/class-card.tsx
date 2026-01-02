@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -179,15 +180,28 @@ export function ClassCard({
                 <p className="text-[10px] font-medium text-muted-foreground uppercase px-1">
                   En clase:
                 </p>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-2">
                   {classSession.alumnos.map((alumno, i) => (
-                    <Badge
-                      key={i}
-                      variant="outline"
-                      className="text-[10px] py-0 px-1.5 font-normal bg-background"
-                    >
-                      {alumno}
-                    </Badge>
+                    <div key={i} className="flex flex-col items-center gap-1">
+                      <Avatar className="h-8 w-8 border-2 border-background ring-1 ring-border">
+                        <AvatarImage
+                          src={alumno.foto}
+                          alt={alumno.nombre}
+                          className="object-cover"
+                        />
+                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                          {alumno.nombre
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()
+                            .slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-[10px] text-muted-foreground max-w-[60px] truncate text-center leading-tight">
+                        {alumno.nombre.split(" ")[0]}
+                      </span>
+                    </div>
                   ))}
                 </div>
               </div>

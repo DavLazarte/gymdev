@@ -1,9 +1,7 @@
-// Advanced Service Worker for Vértice Gym
-const CACHE_NAME = 'vertice-gym-v1.3'; // Incrementa esto en cada deploy
+const CACHE_NAME = 'vertice-gym-v1.5'; // Incrementa esto en cada deploy
 const URLS_TO_CACHE = [
   '/',
   '/manifest.json',
-  '/icon.svg',
   '/logo.jpeg'
 ];
 
@@ -37,8 +35,16 @@ self.addEventListener('activate', (event) => {
 
 // Estrategia de red: Network First con fallback a caché
 self.addEventListener('fetch', (event) => {
-  // Solo cachear peticiones GET
+  // Solo cachear peticiones GET y evitar cachear API o recursos externos innecesarios
   if (event.request.method !== 'GET') return;
+  
+  const url = new URL(event.request.url);
+  
+  // Ignorar llamadas a la API (backend) para evitar problemas de memoria y datos viejos
+  if (url.pathname.startsWith('/api') || url.pathname.includes('/devVentas/')) return;
+
+  // Ignorar esquemas no soportados (chrome-extension, etc)
+  if (!url.protocol.startsWith('http')) return;
 
   event.respondWith(
     fetch(event.request)

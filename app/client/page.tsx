@@ -96,14 +96,19 @@ export default function ClientDashboardPage() {
   }
 
   const mapStatus = (status: string) => {
-    if (status === "activo") return "Activa";
-    if (status === "vencido") return "Vencida";
+    if (status === "activo" || status === "activa") return "Activa";
+    if (status === "vencido" || status === "vencida") return "Vencida";
+    if (status === "por_vencer") return "Por Vencer";
     return "Cancelada";
   };
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4 text-foreground">
-      <AppHeader userName={profile.nombre} userRole="client" />
+      <AppHeader
+        userName={profile.nombre}
+        userRole="client"
+        userImage={profile.foto}
+      />
 
       <main className="container mx-auto max-w-2xl space-y-6 p-4">
         {/* Welcome Section */}
@@ -121,7 +126,9 @@ export default function ClientDashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Estado de Membresía</CardTitle>
-              <StatusBadge status={mapStatus(profile.estado)} />
+              <StatusBadge
+                status={mapStatus(profile.membresia?.estado || "inactivo")}
+              />
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -129,26 +136,26 @@ export default function ClientDashboardPage() {
               <div>
                 <p className="text-xs text-muted-foreground">Plan</p>
                 <p className="font-semibold text-foreground">
-                  {profile.planNombre}
+                  {profile.membresia?.plan || "Sin plan"}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Modalidad</p>
                 <p className="font-semibold text-foreground">
-                  {profile.tipo_membresia === "creditos"
+                  {profile.membresia?.tipo === "creditos"
                     ? "Por Créditos"
                     : "Ilimitado (Tiempo)"}
                 </p>
               </div>
             </div>
 
-            {profile.tipo_membresia === "creditos" && (
+            {profile.membresia?.tipo === "creditos" && (
               <div className="rounded-lg bg-primary/10 p-3 border border-primary/20">
                 <p className="text-xs text-primary/80 font-medium">
                   Créditos disponibles
                 </p>
                 <p className="text-2xl font-bold text-primary">
-                  {profile.creditos_restantes}{" "}
+                  {profile.membresia?.creditos}{" "}
                   <span className="text-sm font-normal">clases</span>
                 </p>
               </div>
@@ -159,8 +166,8 @@ export default function ClientDashboardPage() {
                 Fecha de vencimiento
               </p>
               <p className="text-sm font-semibold text-foreground">
-                {profile.fechaVencimiento
-                  ? new Date(profile.fechaVencimiento).toLocaleDateString(
+                {profile.membresia?.vencimiento
+                  ? new Date(profile.membresia.vencimiento).toLocaleDateString(
                       "es-ES",
                       {
                         day: "numeric",

@@ -1,6 +1,6 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,20 +10,36 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dumbbell, LogOut, Settings } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
 
 interface AppHeaderProps {
   userName: string;
   userRole: string;
+  userImage?: string;
   gymName?: string;
 }
 
 export function AppHeader({
   userName,
   userRole,
+  userImage,
   gymName = "Vertice Center",
 }: AppHeaderProps) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await api.logout();
+      router.push("/login"); // Redirect to login page
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Fallback redirect even if API fails (token might be invalid anyway)
+      router.push("/login");
+    }
+  };
   const initials = userName
     .split(" ")
     .map((n) => n[0])
@@ -56,6 +72,11 @@ export function AppHeader({
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
               <Avatar className="h-10 w-10 border-2 border-primary">
+                <AvatarImage
+                  src={userImage}
+                  alt={userName}
+                  className="object-cover"
+                />
                 <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                   {initials}
                 </AvatarFallback>
@@ -72,11 +93,10 @@ export function AppHeader({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Configuración</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive focus:text-destructive">
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive cursor-pointer"
+              onClick={handleLogout}
+            >
               <LogOut className="mr-2 h-4 w-4" />
               <span>Cerrar sesión</span>
             </DropdownMenuItem>
