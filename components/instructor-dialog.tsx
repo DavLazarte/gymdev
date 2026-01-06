@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import type { Instructor } from "@/lib/types";
 
 interface InstructorDialogProps {
@@ -43,6 +44,8 @@ export function InstructorDialog({
     telefono: "",
     direccion: "",
     estado: "activo" as Instructor["estado"],
+    password: "",
+    resetPassword: false,
   });
 
   useEffect(() => {
@@ -53,6 +56,8 @@ export function InstructorDialog({
         telefono: instructor.telefono,
         direccion: instructor.direccion || "",
         estado: instructor.estado,
+        password: "",
+        resetPassword: false,
       });
     } else {
       setFormData({
@@ -61,6 +66,8 @@ export function InstructorDialog({
         telefono: "",
         direccion: "",
         estado: "activo",
+        password: "",
+        resetPassword: false,
       });
     }
   }, [instructor, open]);
@@ -166,6 +173,47 @@ export function InstructorDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {instructor && instructor.tieneUsuario && (
+            <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="resetPassword">Restablecer contraseña</Label>
+                  <p className="text-[0.8rem] text-muted-foreground">
+                    Cambiar la contraseña de acceso del instructor
+                  </p>
+                </div>
+                <Switch
+                  id="resetPassword"
+                  checked={formData.resetPassword}
+                  onCheckedChange={(checked) =>
+                    setFormData({
+                      ...formData,
+                      resetPassword: checked,
+                      password: checked ? formData.password : "",
+                    })
+                  }
+                />
+              </div>
+
+              {formData.resetPassword && (
+                <div className="space-y-2 pt-2 animate-in fade-in slide-in-from-top-2">
+                  <Label htmlFor="new-password">Nueva contraseña *</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    placeholder="Mínimo 8 caracteres"
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    required={formData.resetPassword}
+                    minLength={8}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <DialogFooter>
             <Button

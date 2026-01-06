@@ -21,9 +21,11 @@ import {
   UserPlus,
   Loader2,
   Trash2,
+  UserCheck,
 } from "lucide-react";
 import { InstructorDialog } from "@/components/instructor-dialog";
 import { InstructorDetailDialog } from "@/components/instructor-detail-dialog";
+import { UserSetupDialog } from "@/components/user-setup-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import type { Instructor } from "@/lib/types";
@@ -51,6 +53,8 @@ export default function InstructoresPage() {
   );
   const [deletingInstructor, setDeletingInstructor] =
     useState<Instructor | null>(null);
+  const [setupUserInstructor, setSetupUserInstructor] =
+    useState<Instructor | null>(null);
   const { toast } = useToast();
 
   const loadInstructores = async () => {
@@ -66,14 +70,16 @@ export default function InstructoresPage() {
         email: item.email,
         telefono: item.telefono,
         foto: item.foto,
-        direccion: item.direccion, // Add this
-        especialidades: [], // Backend no tiene este campo aun
-        biografia: "", // Backend no tiene este campo aun
+        direccion: item.direccion,
+        especialidades: [],
+        biografia: "",
         estado:
           item.estado && item.estado.toLowerCase() === "activo"
             ? ("activo" as const)
             : ("inactivo" as const),
         clasesAsignadas: 0,
+        tieneUsuario: item.tieneUsuario || !!item.userId,
+        userId: item.userId,
       }));
 
       setInstructores(adaptedInstructores);
@@ -180,22 +186,21 @@ export default function InstructoresPage() {
               <TableRow>
                 <TableHead>Instructor</TableHead>
                 <TableHead>Contacto</TableHead>
-                {/* <TableHead>Especialidades</TableHead> eliminadas simplificacion */}
-                {/* <TableHead>Clases</TableHead> */}
                 <TableHead>Estado</TableHead>
+                <TableHead className="text-center">Usuario</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
+                  <TableCell colSpan={5} className="h-24 text-center">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : instructores.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-32 text-center">
+                  <TableCell colSpan={5} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <UserPlus className="h-10 w-10 text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">
@@ -247,12 +252,35 @@ export default function InstructoresPage() {
                         {instructor.estado === "activo" ? "Activo" : "Inactivo"}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-center">
+                      {instructor.tieneUsuario ? (
+                        <div
+                          className="flex justify-center"
+                          title="Tiene usuario asignado"
+                        >
+                          <UserCheck className="h-4 w-4 text-green-500" />
+                        </div>
+                      ) : (
+                        <div
+                          className="flex justify-center opacity-30"
+                          title="Sin usuario"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* <Button variant="ghost" size="icon" onClick={() => setViewingInstructor(instructor)}>
-                          <Eye className="h-4 w-4" />
-                        </Button> */}
-                        {/* Simplificado: Editar Directo */}
+                        {!instructor.tieneUsuario && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => setSetupUserInstructor(instructor)}
+                            title="Habilitar Acceso"
+                          >
+                            <UserPlus className="h-4 w-4 text-amber-500" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -320,6 +348,25 @@ export default function InstructoresPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <UserSetupDialog
+        open={!!setupUserInstructor}
+        onOpenChange={(open) => !open && setSetupUserInstructor(null)}
+        socioId={setupUserInstructor?.id || ""}
+        socioNombre={setupUserInstructor?.nombre || ""}
+        socioEmail={setupUserInstructor?.email || ""}
+        onSuccess={() => {
+          loadInstructores();
+          setSetupUserInstructor(null);
+        }}
+        onSave={async (id, email, password) => {
+          await api.createUserForSocio(id, email, password);
+          toast({
+            title: "Acceso habilitado",
+            description: `Se ha creado el usuario para ${setupUserInstructor?.nombre}.`,
+          });
+        }}
+      />
     </>
   );
 }

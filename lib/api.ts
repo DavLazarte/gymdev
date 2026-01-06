@@ -63,10 +63,14 @@ class ApiClient {
         const errorMessages = Object.values(error.errors)
           .flat()
           .join(', ');
-        throw new Error(errorMessages || error.message || 'Error en la petición');
+        const errorObj = new Error(errorMessages || error.message || 'Error en la petición');
+        (errorObj as any).status = response.status;
+        throw errorObj;
       }
       
-      throw new Error(error.message || 'Error en la petición');
+      const errorObj = new Error(error.message || 'Error en la petición');
+      (errorObj as any).status = response.status;
+      throw errorObj;
     }
 
     return response.json();

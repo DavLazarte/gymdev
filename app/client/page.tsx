@@ -20,6 +20,7 @@ import {
   Clock,
   Trash2,
   CheckCircle2,
+  UserCheck,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -121,72 +122,97 @@ export default function ClientDashboardPage() {
           </p>
         </div>
 
-        {/* Membership Status Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Estado de Membresía</CardTitle>
-              <StatusBadge
-                status={mapStatus(profile.membresia?.estado || "inactivo")}
-              />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground">Plan</p>
-                <p className="font-semibold text-foreground">
-                  {profile.membresia?.plan || "Sin plan"}
-                </p>
+        {/* Membership Status Card (Conditional) */}
+        {profile.tipo_persona === "instructor" ? (
+          <Card className="bg-primary/5 border-primary/20">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <UserCheck className="h-5 w-5 text-primary" />
+                  Panel de Instructor
+                </CardTitle>
+                <Badge className="bg-primary text-primary-foreground hover:bg-primary">
+                  Activo
+                </Badge>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Modalidad</p>
-                <p className="font-semibold text-foreground">
-                  {profile.membresia?.tipo === "creditos"
-                    ? "Por Créditos"
-                    : "Ilimitado (Tiempo)"}
-                </p>
-              </div>
-            </div>
-
-            {profile.membresia?.tipo === "creditos" && (
-              <div className="rounded-lg bg-primary/10 p-3 border border-primary/20">
-                <p className="text-xs text-primary/80 font-medium">
-                  Créditos disponibles
-                </p>
-                <p className="text-2xl font-bold text-primary">
-                  {profile.membresia?.creditos}{" "}
-                  <span className="text-sm font-normal">clases</span>
-                </p>
-              </div>
-            )}
-
-            <div className="rounded-lg bg-muted p-3">
-              <p className="text-xs text-muted-foreground">
-                Fecha de vencimiento
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-foreground/80 mb-2">
+                Como instructor, tienes acceso ilimitado para reservar clases y
+                gestionar tu asistencia.
               </p>
-              <p className="text-sm font-semibold text-foreground">
-                {profile.membresia?.vencimiento
-                  ? new Date(profile.membresia.vencimiento).toLocaleDateString(
-                      "es-ES",
-                      {
+              <div className="flex items-center gap-2 mt-4 text-xs text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span>Reservas habilitadas sin membresía</span>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Estado de Membresía</CardTitle>
+                <StatusBadge
+                  status={mapStatus(profile.membresia?.estado || "inactivo")}
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Plan</p>
+                  <p className="font-semibold text-foreground">
+                    {profile.membresia?.plan || "Sin plan"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Modalidad</p>
+                  <p className="font-semibold text-foreground">
+                    {profile.membresia?.tipo === "creditos"
+                      ? "Por Créditos"
+                      : "Ilimitado (Tiempo)"}
+                  </p>
+                </div>
+              </div>
+
+              {profile.membresia?.tipo === "creditos" && (
+                <div className="rounded-lg bg-primary/10 p-3 border border-primary/20">
+                  <p className="text-xs text-primary/80 font-medium">
+                    Créditos disponibles
+                  </p>
+                  <p className="text-2xl font-bold text-primary">
+                    {profile.membresia?.creditos}{" "}
+                    <span className="text-sm font-normal">clases</span>
+                  </p>
+                </div>
+              )}
+
+              <div className="rounded-lg bg-muted p-3">
+                <p className="text-xs text-muted-foreground">
+                  Fecha de vencimiento
+                </p>
+                <p className="text-sm font-semibold text-foreground">
+                  {profile.membresia?.vencimiento
+                    ? new Date(
+                        profile.membresia.vencimiento
+                      ).toLocaleDateString("es-ES", {
                         day: "numeric",
                         month: "long",
                         year: "numeric",
-                      }
-                    )
-                  : "Sin vencimiento"}
-              </p>
-            </div>
+                      })
+                    : "Sin vencimiento"}
+                </p>
+              </div>
 
-            <Link href="/client/membership">
-              <Button variant="outline" className="w-full bg-transparent">
-                <CreditCard className="mr-2 h-4 w-4" />
-                Ver detalles de membresía
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+              <Link href="/client/membership">
+                <Button variant="outline" className="w-full bg-transparent">
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Ver detalles de membresía
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Próximas Clases Section */}
         <Card>

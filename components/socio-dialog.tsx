@@ -50,6 +50,7 @@ export function SocioDialog({
     foto: "",
     crearUsuario: false,
     password: "",
+    resetPassword: false,
   });
 
   useEffect(() => {
@@ -64,6 +65,7 @@ export function SocioDialog({
         foto: socio.foto || "",
         crearUsuario: false,
         password: "",
+        resetPassword: false,
       });
     } else {
       setFormData({
@@ -76,6 +78,7 @@ export function SocioDialog({
         foto: "",
         crearUsuario: false,
         password: "",
+        resetPassword: false,
       });
     }
   }, [socio, open]);
@@ -222,6 +225,47 @@ export function SocioDialog({
                       setFormData({ ...formData, password: e.target.value })
                     }
                     required={formData.crearUsuario}
+                    minLength={8}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {socio && socio.tieneUsuario && (
+            <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="resetPassword">Restablecer contraseña</Label>
+                  <p className="text-[0.8rem] text-muted-foreground">
+                    Cambiar la contraseña de acceso del socio
+                  </p>
+                </div>
+                <Switch
+                  id="resetPassword"
+                  checked={formData.resetPassword}
+                  onCheckedChange={(checked) =>
+                    setFormData({
+                      ...formData,
+                      resetPassword: checked,
+                      password: checked ? formData.password : "",
+                    })
+                  }
+                />
+              </div>
+
+              {formData.resetPassword && (
+                <div className="space-y-2 pt-2 animate-in fade-in slide-in-from-top-2">
+                  <Label htmlFor="new-password">Nueva contraseña *</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    placeholder="Mínimo 8 caracteres"
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    required={formData.resetPassword}
                     minLength={8}
                   />
                 </div>

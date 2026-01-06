@@ -16,6 +16,8 @@ export interface Socio {
   userId?: string
   tipo_membresia?: string
   creditos_restantes?: number
+  tipo_persona?: "cliente" | "instructor"
+  role?: string
 }
 
 export interface Membresia {
@@ -81,6 +83,8 @@ export interface Instructor {
   biografia: string
   estado: "activo" | "inactivo"
   clasesAsignadas: number
+  tieneUsuario?: boolean
+  userId?: string
 }
 
 export interface Asistencia {
