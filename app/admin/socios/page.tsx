@@ -56,22 +56,53 @@ export default function SociosPage() {
   const { toast } = useToast();
 
   // Cargar socios desde la API
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    lastPage: 1,
+    total: 0,
+    perPage: 15,
+  });
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPagination((prev) => ({ ...prev, currentPage: 1 })); // Reset to page 1 on search
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   useEffect(() => {
     loadSocios();
-  }, []);
+  }, [debouncedSearch, filterEstado, pagination.currentPage]);
 
   const loadSocios = async () => {
-    console.log("Cargando socios...");
     setIsLoading(true);
     try {
-      const response = await api.getSocios();
-      console.log("Socios cargados:", response?.socios?.length || 0, "socios");
-      // Map idpersona to id for React keys and selection
+      const response = await api.getSocios({
+        search: debouncedSearch,
+        estado: filterEstado,
+        page: pagination.currentPage,
+        per_page: pagination.perPage,
+      });
+
       const mappedSocios = (response?.socios || []).map((s: any) => ({
         ...s,
         id: String(s.id || s.idpersona || Math.random()),
       }));
+
       setSocios(mappedSocios);
+
+      if (response?.meta) {
+        setPagination((prev) => ({
+          ...prev,
+          currentPage: response.meta.current_page,
+          lastPage: response.meta.last_page,
+          total: response.meta.total,
+        }));
+      }
     } catch (error: any) {
       console.error("Error al cargar socios:", error);
       toast({
@@ -84,17 +115,8 @@ export default function SociosPage() {
     }
   };
 
-  const filteredSocios = socios.filter((socio) => {
-    const matchesSearch =
-      socio.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      socio.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      socio.telefono.includes(searchTerm);
-
-    const matchesFilter =
-      filterEstado === "todos" || socio.estado === filterEstado;
-
-    return matchesSearch && matchesFilter;
-  });
+  // El filtrado ahora ocurre en el servidor
+  const filteredSocios = socios;
 
   const handleCreateSocio = async (socio: Omit<Socio, "id">) => {
     try {
@@ -149,6 +171,8 @@ export default function SociosPage() {
         fechaNacimiento: updatedSocio.fechaNacimiento,
         dni: updatedSocio.dni,
         foto: updatedSocio.foto,
+        estado: updatedSocio.estado,
+        password: updatedSocio.password,
       });
 
       await loadSocios(); // Recargar la lista
@@ -401,10 +425,46 @@ export default function SociosPage() {
           </Table>
         </div>
 
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            Mostrando {filteredSocios.length} de {socios.length} socios
-          </span>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Mostrando {filteredSocios.length} de {pagination.total} socios
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setPagination((prev) => ({
+                  ...prev,
+                  currentPage: Math.max(1, prev.currentPage - 1),
+                }))
+              }
+              disabled={pagination.currentPage === 1 || isLoading}
+            >
+              Anterior
+            </Button>
+            <div className="flex items-center gap-1 mx-2 text-sm font-medium">
+              <span>Página</span>
+              <span className="text-foreground">{pagination.currentPage}</span>
+              <span>de</span>
+              <span>{pagination.lastPage}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setPagination((prev) => ({
+                  ...prev,
+                  currentPage: Math.min(prev.lastPage, prev.currentPage + 1),
+                }))
+              }
+              disabled={
+                pagination.currentPage === pagination.lastPage || isLoading
+              }
+            >
+              Siguiente
+            </Button>
+          </div>
         </div>
       </div>
 

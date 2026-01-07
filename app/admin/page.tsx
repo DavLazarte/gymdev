@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { AppHeader } from "@/components/app-header";
 import { MobileNav } from "@/components/mobile-nav";
 import {
@@ -15,36 +16,73 @@ import {
   DollarSign,
   TrendingUp,
   Activity,
+  Loader2,
 } from "lucide-react";
 import { useRequireRole } from "@/hooks/useRequireRole";
+import { api } from "@/lib/api";
 
+type DashboardStats = {
+  metrics: {
+    sociosActivos: number;
+    clasesHoy: number;
+    reservasSemana: number;
+    ingresosHoy: number;
+  };
+  charts: {
+    asistenciaSemanal: { day: string; visits: number; percentage: number }[];
+    clasesPopulares: { name: string; reservations: number; trend: string }[];
+  };
+  membershipOverview: {
+    activas: number;
+    por_vencer: number;
+    vencidas: number;
+  };
+  ocupacion: {
+    porcentaje: number;
+  };
+  instructores: { name: string; classes: number }[];
+};
 
 export default function AdminDashboardPage() {
-  // Solo gym_owner puede acceder
-  const { user, loading } = useRequireRole('gym_owner');
+  const { user, loading: roleLoading } = useRequireRole("gym_owner");
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
 
- 
-  
+  useEffect(() => {
+    if (user) {
+      loadStats();
+    }
+  }, [user]);
 
-  if (loading) {
+  const loadStats = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getDashboardStats();
+      setStats(data);
+    } catch (error) {
+      console.error("Error al cargar estadísticas:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (roleLoading || (loading && !stats)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
           <p className="mt-2 text-sm text-muted-foreground">Cargando...</p>
         </div>
       </div>
     );
   }
 
-  if (!user) {
+  if (!user || !stats) {
     return null;
   }
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
-      {/* <AppHeader userName={user.name} userRole="admin" /> */}
-
       <main className="container mx-auto max-w-6xl space-y-6 p-4">
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-foreground">
@@ -65,10 +103,11 @@ export default function AdminDashboardPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">127</div>
+              <div className="text-2xl font-bold text-foreground">
+                {stats.metrics.sociosActivos}
+              </div>
               <p className="text-xs text-muted-foreground">
-                <span className="text-primary">+12%</span> respecto al mes
-                anterior
+                <span className="text-primary">Tiempo real</span>
               </p>
             </CardContent>
           </Card>
@@ -79,9 +118,11 @@ export default function AdminDashboardPage() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">24</div>
+              <div className="text-2xl font-bold text-foreground">
+                {stats.metrics.clasesHoy}
+              </div>
               <p className="text-xs text-muted-foreground">
-                8 clases en curso ahora
+                Programadas para hoy
               </p>
             </CardContent>
           </Card>
@@ -89,28 +130,34 @@ export default function AdminDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Reservas Activas
+                Reservas Semanales
               </CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">342</div>
-              <p className="text-xs text-muted-foreground">Para esta semana</p>
+              <div className="text-2xl font-bold text-foreground">
+                {stats.metrics.reservasSemana}
+              </div>
+              <p className="text-xs text-muted-foreground">Total esta semana</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Ingresos Estimados
+                Ingresos del Día
               </CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">€ 12,450</div>
+              <div className="text-2xl font-bold text-foreground">
+                {new Intl.NumberFormat("es-AR", {
+                  style: "currency",
+                  currency: "ARS",
+                }).format(stats.metrics.ingresosHoy)}
+              </div>
               <p className="text-xs text-muted-foreground">
-                <span className="text-primary">+8%</span> respecto al mes
-                anterior
+                Cobros registrados hoy
               </p>
             </CardContent>
           </Card>
@@ -121,22 +168,14 @@ export default function AdminDashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Asistencia Semanal</CardTitle>
-              <CardDescription>Número de visitas por día</CardDescription>
+              <CardDescription>Número de visitas diarios</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {[
-                  { day: "Lun", visits: 45, percentage: 90 },
-                  { day: "Mar", visits: 52, percentage: 100 },
-                  { day: "Mié", visits: 48, percentage: 92 },
-                  { day: "Jue", visits: 41, percentage: 79 },
-                  { day: "Vie", visits: 38, percentage: 73 },
-                  { day: "Sáb", visits: 35, percentage: 67 },
-                  { day: "Dom", visits: 28, percentage: 54 },
-                ].map((item) => (
+                {stats.charts.asistenciaSemanal.map((item) => (
                   <div key={item.day} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-foreground">
+                      <span className="font-medium text-foreground uppercase">
                         {item.day}
                       </span>
                       <span className="text-muted-foreground">
@@ -145,7 +184,7 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full bg-primary transition-all"
+                        className="h-full bg-primary transition-all duration-500"
                         style={{ width: `${item.percentage}%` }}
                       />
                     </div>
@@ -158,17 +197,13 @@ export default function AdminDashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Clases Populares</CardTitle>
-              <CardDescription>Top 5 clases más reservadas</CardDescription>
+              <CardDescription>
+                Top 5 con más histórico de reservas
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {[
-                  { name: "CrossFit", reservations: 89, trend: "+15%" },
-                  { name: "Spinning", reservations: 76, trend: "+8%" },
-                  { name: "Yoga", reservations: 68, trend: "+12%" },
-                  { name: "HIIT", reservations: 54, trend: "+5%" },
-                  { name: "Pilates", reservations: 42, trend: "+3%" },
-                ].map((item, i) => (
+                {stats.charts.clasesPopulares.map((item, i) => (
                   <div
                     key={item.name}
                     className="flex items-center justify-between"
@@ -182,7 +217,7 @@ export default function AdminDashboardPage() {
                           {item.name}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {item.reservations} reservas
+                          {item.reservations} reservas tot.
                         </p>
                       </div>
                     </div>
@@ -192,6 +227,11 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
                 ))}
+                {stats.charts.clasesPopulares.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Aún no hay reservas registradas.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -202,24 +242,28 @@ export default function AdminDashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Membresías</CardTitle>
-              <CardDescription>Estado de las membresías</CardDescription>
+              <CardDescription>Estado de los socios</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Activas</span>
-                <span className="font-semibold text-primary">104</span>
+                <span className="font-semibold text-primary">
+                  {stats.membershipOverview.activas}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
                   Por vencer (7 días)
                 </span>
                 <span className="font-semibold text-yellow-600 dark:text-yellow-500">
-                  18
+                  {stats.membershipOverview.por_vencer}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Vencidas</span>
-                <span className="font-semibold text-destructive">5</span>
+                <span className="font-semibold text-destructive">
+                  {stats.membershipOverview.vencidas}
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -227,20 +271,22 @@ export default function AdminDashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Ocupación Hoy</CardTitle>
-              <CardDescription>Porcentaje de ocupación</CardDescription>
+              <CardDescription>Porcentaje promedio de reservas</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-primary">78%</div>
+                  <div className="text-4xl font-bold text-primary">
+                    {stats.ocupacion.porcentaje}%
+                  </div>
                   <p className="text-sm text-muted-foreground">
-                    Ocupación actual
+                    Ocupación estimada
                   </p>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
-                    className="h-full bg-primary transition-all"
-                    style={{ width: "78%" }}
+                    className="h-full bg-primary transition-all duration-700"
+                    style={{ width: `${stats.ocupacion.porcentaje}%` }}
                   />
                 </div>
               </div>
@@ -249,16 +295,12 @@ export default function AdminDashboardPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Instructores</CardTitle>
-              <CardDescription>Personal activo hoy</CardDescription>
+              <CardTitle className="text-base">Instructores Activos</CardTitle>
+              <CardDescription>Dictando clases hoy</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {[
-                  { name: "Carlos Ruiz", classes: 4 },
-                  { name: "Ana Martínez", classes: 3 },
-                  { name: "Pedro López", classes: 5 },
-                ].map((instructor) => (
+                {stats.instructores.map((instructor) => (
                   <div
                     key={instructor.name}
                     className="flex items-center justify-between text-sm"
@@ -267,15 +309,19 @@ export default function AdminDashboardPage() {
                       {instructor.name}
                     </span>
                     <span className="text-muted-foreground">
-                      {instructor.classes} clases
+                      {instructor.classes} clases hoy
                     </span>
                   </div>
                 ))}
+                {stats.instructores.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    No hay instructores con clases hoy.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
-
       </main>
 
       <MobileNav role="admin" />

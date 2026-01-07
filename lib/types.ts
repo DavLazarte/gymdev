@@ -18,6 +18,8 @@ export interface Socio {
   creditos_restantes?: number
   tipo_persona?: "cliente" | "instructor"
   role?: string
+  password?: string
+  resetPassword?: boolean
 }
 
 export interface Membresia {
@@ -85,6 +87,8 @@ export interface Instructor {
   clasesAsignadas: number
   tieneUsuario?: boolean
   userId?: string
+  password?: string
+  resetPassword?: boolean
 }
 
 export interface Asistencia {

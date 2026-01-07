@@ -120,13 +120,15 @@ class ApiClient {
   }
 
   // Socios
-  async getSocios(search?: string, estado?: string) {
-    const params = new URLSearchParams();
-    if (search) params.append('search', search);
-    if (estado && estado !== 'todos') params.append('estado', estado);
+  async getSocios(params?: { search?: string, estado?: string, page?: number, per_page?: number }) {
+    const urlParams = new URLSearchParams();
+    if (params?.search) urlParams.append('search', params.search);
+    if (params?.estado && params.estado !== 'todos') urlParams.append('estado', params.estado);
+    if (params?.page) urlParams.append('page', String(params.page));
+    if (params?.per_page) urlParams.append('per_page', String(params.per_page));
     
-    const queryString = params.toString();
-    return this.get<{ socios: any[] }>(`/socios${queryString ? `?${queryString}` : ''}`);
+    const queryString = urlParams.toString();
+    return this.get<{ socios: any[], meta: any }>(`/socios${queryString ? `?${queryString}` : ''}`);
   }
 
   async getSocio(id: string) {
@@ -165,7 +167,7 @@ class ApiClient {
     const params = new URLSearchParams()
     params.append("tipo_persona", "instructor")
     if (search) params.append("search", search)
-    const response = await this.get<{ socios: any[] }>(`/socios?${params.toString()}`)
+    const response = await this.get<{ socios: any[], meta: any }>(`/socios?${params.toString()}`)
     return response.socios
   }
 
@@ -298,6 +300,30 @@ class ApiClient {
     observaciones?: string;
   }) {
     return this.post<{ message: string; pago: any }>("/pagos-gym", data)
+  }
+
+  async getDashboardStats() {
+    return this.get<{
+      metrics: {
+        sociosActivos: number;
+        clasesHoy: number;
+        reservasSemana: number;
+        ingresosHoy: number;
+      };
+      charts: {
+        asistenciaSemanal: { day: string; visits: number; percentage: number }[];
+        clasesPopulares: { name: string; reservations: number; trend: string }[];
+      };
+      membershipOverview: {
+        activas: number;
+        por_vencer: number;
+        vencidas: number;
+      };
+      ocupacion: {
+        porcentaje: number;
+      };
+      instructores: { name: string; classes: number }[];
+    }>("/dashboard/stats");
   }
 }
 

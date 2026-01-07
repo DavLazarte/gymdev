@@ -64,12 +64,7 @@ export default function BookClassPage() {
               Reservar Clase
             </h1>
             <p className="text-sm text-primary font-medium">
-              Clases para hoy:{" "}
-              {new Date().toLocaleDateString("es-ES", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })}
+              Horarios Disponibles
             </p>
           </div>
         </div>
