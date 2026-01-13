@@ -64,6 +64,8 @@ export function ClaseDialog({
     duracion_minutos: "60",
     cupo_maximo: "20",
     estado: "activa" as Clase["estado"],
+    minutos_limite_reserva: "",
+    minutos_limite_cancelacion: "",
   });
 
   useEffect(() => {
@@ -104,6 +106,12 @@ export function ClaseDialog({
         duracion_minutos: String(clase.duracion_minutos),
         cupo_maximo: String(clase.cupo_maximo),
         estado: clase.estado,
+        minutos_limite_reserva: clase.minutos_limite_reserva
+          ? String(clase.minutos_limite_reserva)
+          : "",
+        minutos_limite_cancelacion: clase.minutos_limite_cancelacion
+          ? String(clase.minutos_limite_cancelacion)
+          : "",
       });
     } else {
       setFormData({
@@ -116,6 +124,8 @@ export function ClaseDialog({
         duracion_minutos: "60",
         cupo_maximo: "20",
         estado: "activa",
+        minutos_limite_reserva: "",
+        minutos_limite_cancelacion: "",
       });
     }
   }, [clase, open]);
@@ -135,6 +145,12 @@ export function ClaseDialog({
         duracion_minutos: Number(formData.duracion_minutos),
         cupo_maximo: Number(formData.cupo_maximo),
         estado: formData.estado,
+        minutos_limite_reserva: formData.minutos_limite_reserva
+          ? Number(formData.minutos_limite_reserva)
+          : null,
+        minutos_limite_cancelacion: formData.minutos_limite_cancelacion
+          ? Number(formData.minutos_limite_cancelacion)
+          : null,
       };
       if (clase) {
         await api.updateClase(clase.id, dataToSave);
@@ -297,6 +313,52 @@ export function ClaseDialog({
                 placeholder="20"
                 required
               />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="minutos_limite_reserva">
+                Anticipación mínima para reservar (minutos)
+              </Label>
+              <Input
+                id="minutos_limite_reserva"
+                type="number"
+                min="0"
+                value={formData.minutos_limite_reserva}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    minutos_limite_reserva: e.target.value,
+                  })
+                }
+                placeholder="0 = sin límite"
+              />
+              <p className="text-xs text-muted-foreground">
+                Ej: 30 = solo se puede reservar si faltan al menos 30 minutos
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="minutos_limite_cancelacion">
+                Anticipación mínima para cancelar (minutos)
+              </Label>
+              <Input
+                id="minutos_limite_cancelacion"
+                type="number"
+                min="0"
+                value={formData.minutos_limite_cancelacion}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    minutos_limite_cancelacion: e.target.value,
+                  })
+                }
+                placeholder="0 = sin límite"
+              />
+              <p className="text-xs text-muted-foreground">
+                Ej: 60 = solo se puede cancelar si faltan al menos 60 minutos
+              </p>
             </div>
           </div>
 

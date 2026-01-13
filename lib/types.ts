@@ -64,6 +64,8 @@ export interface Clase {
   duracion_minutos: number
   cupo_maximo: number
   estado: "activa" | "cancelada"
+  minutos_limite_reserva?: number
+  minutos_limite_cancelacion?: number
   inscritos_hoy?: number
   // Relational data for UI
   tipo_clase?: {
@@ -131,6 +133,7 @@ export interface ClassSlot {
   disponibles: number
   reservada: boolean
   estado_clase: string
+  puede_reservar?: boolean
 }
 
 export interface Reserva {

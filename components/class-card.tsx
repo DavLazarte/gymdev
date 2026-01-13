@@ -126,6 +126,10 @@ export function ClassCard({
                 <Badge variant="destructive" className="text-xs">
                   Completa
                 </Badge>
+              ) : classSession.puede_reservar === false ? (
+                <Badge className="bg-orange-500/10 text-orange-700 hover:bg-orange-500/20 dark:text-orange-500 text-xs">
+                  Fuera de tiempo
+                </Badge>
               ) : isLowAvailability ? (
                 <Badge className="bg-yellow-500/10 text-yellow-700 hover:bg-yellow-500/20 dark:text-yellow-500 text-xs">
                   {classSession.disponibles} lugares
@@ -233,7 +237,12 @@ export function ClassCard({
                   )}
                   <Button
                     size="sm"
-                    disabled={isFull || (isBooked && !isDeleting) || isBooking}
+                    disabled={
+                      isFull ||
+                      classSession.puede_reservar === false ||
+                      (isBooked && !isDeleting) ||
+                      isBooking
+                    }
                     onClick={() => setShowDialog(true)}
                     className={cn(
                       "h-8",
@@ -250,6 +259,8 @@ export function ClassCard({
                       </>
                     ) : isFull ? (
                       "No disponible"
+                    ) : classSession.puede_reservar === false ? (
+                      "Fuera de tiempo"
                     ) : (
                       "Reservar"
                     )}
