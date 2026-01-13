@@ -60,7 +60,7 @@ export default function InstructoresPage() {
   const loadInstructores = async () => {
     try {
       setIsLoading(true);
-      const data = await api.getInstructores(searchTerm);
+      const data = await api.getInstructores({ search: searchTerm });
 
       // Adaptar respuesta del backend a tipo Instructor si es necesario
       // Backend devuelve estructura Socio (Persona), adaptamos aquí
