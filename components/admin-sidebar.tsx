@@ -14,6 +14,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  TrendingDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/admin/instructores", icon: UserCheck, label: "Instructores" },
   { href: "/admin/asistencias", icon: Activity, label: "Asistencias" },
   { href: "/admin/pagos", icon: DollarSign, label: "Pagos" },
+  { href: "/admin/salidas", icon: TrendingDown, label: "Gastos" },
   { href: "/admin/configuracion", icon: Settings, label: "Configuración" },
 ];
 

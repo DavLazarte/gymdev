@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 interface ApiError {
   message: string;
@@ -11,22 +11,22 @@ class ApiClient {
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
-    if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem('auth_token');
+    if (typeof window !== "undefined") {
+      this.token = localStorage.getItem("auth_token");
     }
   }
 
   setToken(token: string) {
     this.token = token;
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('auth_token', token);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("auth_token", token);
     }
   }
 
   clearToken() {
     this.token = null;
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('auth_token');
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("auth_token");
     }
   }
 
@@ -36,8 +36,8 @@ class ApiClient {
   ): Promise<T> {
     // Cambio aquí: usar Record<string, string> en lugar de HeadersInit
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      "Content-Type": "application/json",
+      Accept: "application/json",
     };
 
     // Agregar headers personalizados del options
@@ -47,7 +47,7 @@ class ApiClient {
 
     // Ahora sí puedes agregar Authorization sin problemas
     if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+      headers["Authorization"] = `Bearer ${this.token}`;
     }
 
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
@@ -57,18 +57,18 @@ class ApiClient {
 
     if (!response.ok) {
       const error: ApiError = await response.json();
-      
+
       // Si hay errores de validación (422), formatearlos
-      if (error.errors && typeof error.errors === 'object') {
-        const errorMessages = Object.values(error.errors)
-          .flat()
-          .join(', ');
-        const errorObj = new Error(errorMessages || error.message || 'Error en la petición');
+      if (error.errors && typeof error.errors === "object") {
+        const errorMessages = Object.values(error.errors).flat().join(", ");
+        const errorObj = new Error(
+          errorMessages || error.message || "Error en la petición"
+        );
         (errorObj as any).status = response.status;
         throw errorObj;
       }
-      
-      const errorObj = new Error(error.message || 'Error en la petición');
+
+      const errorObj = new Error(error.message || "Error en la petición");
       (errorObj as any).status = response.status;
       throw errorObj;
     }
@@ -78,8 +78,8 @@ class ApiClient {
 
   // Auth
   async login(email: string, password: string) {
-    const data = await this.request<{ user: any; token: string }>('/login', {
-      method: 'POST',
+    const data = await this.request<{ user: any; token: string }>("/login", {
+      method: "POST",
       body: JSON.stringify({ email, password }),
     });
 
@@ -88,47 +88,55 @@ class ApiClient {
   }
 
   async logout() {
-    await this.request('/logout', { method: 'POST' });
+    await this.request("/logout", { method: "POST" });
     this.clearToken();
   }
 
   async getUser() {
-    return this.request<{ user: any }>('/user');
+    return this.request<{ user: any }>("/user");
   }
 
   // Métodos genéricos
   async get<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, { method: 'GET' });
+    return this.request<T>(endpoint, { method: "GET" });
   }
 
   async post<T>(endpoint: string, data: any): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(data),
     });
   }
 
   async put<T>(endpoint: string, data: any): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(data),
     });
   }
 
   async delete<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, { method: 'DELETE' });
+    return this.request<T>(endpoint, { method: "DELETE" });
   }
 
   // Socios
-  async getSocios(params?: { search?: string, estado?: string, page?: number, per_page?: number }) {
+  async getSocios(params?: {
+    search?: string;
+    estado?: string;
+    page?: number;
+    per_page?: number;
+  }) {
     const urlParams = new URLSearchParams();
-    if (params?.search) urlParams.append('search', params.search);
-    if (params?.estado && params.estado !== 'todos') urlParams.append('estado', params.estado);
-    if (params?.page) urlParams.append('page', String(params.page));
-    if (params?.per_page) urlParams.append('per_page', String(params.per_page));
-    
+    if (params?.search) urlParams.append("search", params.search);
+    if (params?.estado && params.estado !== "todos")
+      urlParams.append("estado", params.estado);
+    if (params?.page) urlParams.append("page", String(params.page));
+    if (params?.per_page) urlParams.append("per_page", String(params.per_page));
+
     const queryString = urlParams.toString();
-    return this.get<{ socios: any[], meta: any }>(`/socios${queryString ? `?${queryString}` : ''}`);
+    return this.get<{ socios: any[]; meta: any }>(
+      `/socios${queryString ? `?${queryString}` : ""}`
+    );
   }
 
   async getSocio(id: string) {
@@ -136,7 +144,7 @@ class ApiClient {
   }
 
   async createSocio(data: any) {
-    return this.post<{ message: string; socio: any }>('/socios', data);
+    return this.post<{ message: string; socio: any }>("/socios", data);
   }
 
   async updateSocio(id: string, data: any) {
@@ -148,158 +156,261 @@ class ApiClient {
   }
 
   async createUserForSocio(id: string, email: string, password: string) {
-    return this.post<{ message: string; user: any }>(`/socios/${id}/create-user`, {
-      email,
-      password,
-    });
+    return this.post<{ message: string; user: any }>(
+      `/socios/${id}/create-user`,
+      {
+        email,
+        password,
+      }
+    );
   }
 
   async getProfile() {
-    return this.get<{ socio: any }>("/perfil")
+    return this.get<{ socio: any }>("/perfil");
   }
 
   async updateProfile(data: any) {
-    return this.post<{ message: string; socio: any }>("/perfil", data)
+    return this.post<{ message: string; socio: any }>("/perfil", data);
   }
 
   // Instructores (reutiliza endpoints de socios)
-  async getInstructores(search?: string) {
-    const params = new URLSearchParams()
-    params.append("tipo_persona", "instructor")
-    if (search) params.append("search", search)
-    const response = await this.get<{ socios: any[], meta: any }>(`/socios?${params.toString()}`)
-    return response.socios
+  async getInstructores(params?: { search?: string; per_page?: number }) {
+    const urlParams = new URLSearchParams();
+    urlParams.append("tipo_persona", "instructor");
+    if (params?.search) urlParams.append("search", params.search);
+    if (params?.per_page) urlParams.append("per_page", String(params.per_page));
+    
+    const response = await this.get<{ socios: any[]; meta: any }>(
+      `/socios?${urlParams.toString()}`
+    );
+    return response.socios;
   }
 
   async createInstructor(data: any) {
-    return this.post<{ message: string; socio: any }>("/socios", { ...data, tipo_persona: "instructor" })
+    return this.post<{ message: string; socio: any }>("/socios", {
+      ...data,
+      tipo_persona: "instructor",
+    });
   }
 
   async updateInstructor(id: string, data: any) {
-    return this.put<{ message: string; socio: any }>(`/socios/${id}`, data)
+    return this.put<{ message: string; socio: any }>(`/socios/${id}`, data);
   }
 
   async deleteInstructor(id: string) {
-    return this.delete<{ message: string }>(`/socios/${id}`)
+    return this.delete<{ message: string }>(`/socios/${id}`);
   }
 
   // Planes (Servicios)
   async getPlanes(search?: string) {
-    const params = new URLSearchParams()
-    params.append("tipo_servicio", "plan")
-    if (search) params.append("search", search)
-    const response = await this.get<{ servicios: any[] }>(`/servicios?${params.toString()}`)
-    return response.servicios
+    const params = new URLSearchParams();
+    params.append("tipo_servicio", "plan");
+    if (search) params.append("search", search);
+    const response = await this.get<{ servicios: any[] }>(
+      `/servicios?${params.toString()}`
+    );
+    return response.servicios;
   }
 
   async createPlan(data: any) {
     // Ensure tipo_servicio is set
-    return this.post<{ message: string; servicio: any }>("/servicios", { ...data, tipo_servicio: "plan" })
+    return this.post<{ message: string; servicio: any }>("/servicios", {
+      ...data,
+      tipo_servicio: "plan",
+    });
   }
 
   async updatePlan(id: string, data: any) {
-    return this.put<{ message: string; servicio: any }>(`/servicios/${id}`, data)
+    return this.put<{ message: string; servicio: any }>(
+      `/servicios/${id}`,
+      data
+    );
   }
 
   async deletePlan(id: string) {
-    return this.delete<{ message: string }>(`/servicios/${id}`)
+    return this.delete<{ message: string }>(`/servicios/${id}`);
   }
 
   // Membresías
-  async getMembresias(params?: { id_socio?: string; estado?: string; search?: string }) {
-    const urlParams = new URLSearchParams()
-    if (params?.id_socio) urlParams.append("id_socio", params.id_socio)
-    if (params?.estado && params.estado !== "todas") urlParams.append("estado", params.estado)
-    if (params?.search) urlParams.append("search", params.search)
-    
-    const queryString = urlParams.toString()
-    const response = await this.get<{ membresias: any[] }>(`/membresias${queryString ? `?${queryString}` : ""}`)
-    return response.membresias
+  async getMembresias(params?: {
+    id_socio?: string;
+    estado?: string;
+    search?: string;
+  }) {
+    const urlParams = new URLSearchParams();
+    if (params?.id_socio) urlParams.append("id_socio", params.id_socio);
+    if (params?.estado && params.estado !== "todas")
+      urlParams.append("estado", params.estado);
+    if (params?.search) urlParams.append("search", params.search);
+
+    const queryString = urlParams.toString();
+    const response = await this.get<{ membresias: any[] }>(
+      `/membresias${queryString ? `?${queryString}` : ""}`
+    );
+    return response.membresias;
   }
 
-  async createMembresia(data: { id_socio: string; id_plan: string; fecha_inicio?: string }) {
-    return this.post<{ message: string; membresia: any }>("/membresias", data)
+  async createMembresia(data: {
+    id_socio: string;
+    id_plan: string;
+    fecha_inicio?: string;
+  }) {
+    return this.post<{ message: string; membresia: any }>("/membresias", data);
   }
 
   async updateMembresia(id: string, data: any) {
-    return this.put<{ message: string; membresia: any }>(`/membresias/${id}`, data)
+    return this.put<{ message: string; membresia: any }>(
+      `/membresias/${id}`,
+      data
+    );
   }
 
   async deleteMembresia(id: string) {
-    return this.delete<{ message: string }>(`/membresias/${id}`)
+    return this.delete<{ message: string }>(`/membresias/${id}`);
   }
 
   // Clases
   async getClases() {
-    return this.get<{ clases: any[] }>("/clases")
+    return this.get<{ clases: any[] }>("/clases");
   }
 
   async createClase(data: any) {
-    return this.post<{ message: string; clase: any }>("/clases", data)
+    return this.post<{ message: string; clase: any }>("/clases", data);
   }
 
   async updateClase(id: string, data: any) {
-    return this.put<{ message: string; clase: any }>(`/clases/${id}`, data)
+    return this.put<{ message: string; clase: any }>(`/clases/${id}`, data);
   }
 
   async deleteClase(id: string) {
-    return this.delete<{ message: string }>(`/clases/${id}`)
+    return this.delete<{ message: string }>(`/clases/${id}`);
+  }
+
+  async getInstructorStats(instructorId: string, startDate: string, endDate: string) {
+    const params = new URLSearchParams({
+        instructor_id: instructorId,
+        start_date: startDate,
+        end_date: endDate
+    });
+    return this.get<{ total_classes: number, details: any[] }>(`/clases/instructor-stats?${params.toString()}`);
   }
 
   // Reservas y Disponibilidad
   async getAvailableClasses(startDate?: string, endDate?: string) {
-    const params = new URLSearchParams()
-    if (startDate) params.append("start_date", startDate)
-    if (endDate) params.append("end_date", endDate)
-    const response = await this.get<{ instancias: any[] }>(`/clases-disponibles?${params.toString()}`)
-    return response.instancias
+    const params = new URLSearchParams();
+    if (startDate) params.append("start_date", startDate);
+    if (endDate) params.append("end_date", endDate);
+    const response = await this.get<{ instancias: any[] }>(
+      `/clases-disponibles?${params.toString()}`
+    );
+    return response.instancias;
   }
 
-  async createReserva(data: { id_clase_gym: string; fecha_reserva: string; id_persona?: string }) {
-    return this.post<{ message: string; reserva: any }>("/reservas", data)
+  async createReserva(data: {
+    id_clase_gym: string;
+    fecha_reserva: string;
+    id_persona?: string;
+  }) {
+    return this.post<{ message: string; reserva: any }>("/reservas", data);
   }
 
   async getReservas(params?: { id_persona?: string; fecha?: string }) {
-    const urlParams = new URLSearchParams()
-    if (params?.id_persona) urlParams.append("id_persona", params.id_persona)
-    if (params?.fecha) urlParams.append("fecha", params.fecha)
-    const response = await this.get<{ reservas: any[] }>(`/reservas?${urlParams.toString()}`)
-    return response.reservas
+    const urlParams = new URLSearchParams();
+    if (params?.id_persona) urlParams.append("id_persona", params.id_persona);
+    if (params?.fecha) urlParams.append("fecha", params.fecha);
+    const response = await this.get<{ reservas: any[] }>(
+      `/reservas?${urlParams.toString()}`
+    );
+    return response.reservas;
   }
 
   async cancelReserva(id: string) {
-    return this.delete<{ message: string }>(`/reservas/${id}`)
+    return this.delete<{ message: string }>(`/reservas/${id}`);
   }
 
-  async marcarAsistencia(data: { id_persona: string; id_clase_gym?: string; id_reserva?: string }) {
-    return this.post<{ message: string; asistencia: any }>("/asistencias", data)
+  async marcarAsistencia(data: {
+    id_persona: string;
+    id_clase_gym?: string;
+    id_reserva?: string;
+  }) {
+    return this.post<{ message: string; asistencia: any }>(
+      "/asistencias",
+      data
+    );
   }
 
-  async getAsistencias() {
-    const response = await this.get<{ asistencias: any[] }>("/asistencias")
-    return response.asistencias
+  async getAsistencias(params?: { page?: number; per_page?: number }) {
+    const urlParams = new URLSearchParams();
+    if (params?.page) urlParams.append("page", String(params.page));
+    if (params?.per_page) urlParams.append("per_page", String(params.per_page));
+
+    const response = await this.get<{ asistencias: any[]; meta?: any }>(
+      `/asistencias${urlParams.toString() ? `?${urlParams.toString()}` : ""}`
+    );
+    return response.asistencias.length !== undefined ? response : { asistencias: response as any, meta: undefined };
   }
 
   // Pagos
-  async getPagos(params?: { id_persona?: string; search?: string }) {
-    const urlParams = new URLSearchParams()
-    if (params?.id_persona) urlParams.append("id_persona", params.id_persona)
-    if (params?.search) urlParams.append("search", params.search)
-    
-    return this.get<{ pagos: any[]; deuda_total?: number }>(
+  async getPagos(params?: { id_persona?: string; search?: string; page?: number; per_page?: number }) {
+    const urlParams = new URLSearchParams();
+    if (params?.id_persona) urlParams.append("id_persona", params.id_persona);
+    if (params?.search) urlParams.append("search", params.search);
+    if (params?.page) urlParams.append("page", String(params.page));
+    if (params?.per_page) urlParams.append("per_page", String(params.per_page));
+
+    return this.get<{ pagos: any[]; meta?: any; deuda_total?: number }>(
       `/pagos-gym${urlParams.toString() ? `?${urlParams.toString()}` : ""}`
-    )
+    );
   }
 
-  async createPago(data: { 
-    id_persona: string; 
-    id_membresia: string; 
-    monto: number; 
-    metodo_pago: string; 
+  async createPago(data: {
+    id_persona: string;
+    id_membresia: string;
+    monto: number;
+    metodo_pago: string;
     fecha_pago: string;
     observaciones?: string;
   }) {
-    return this.post<{ message: string; pago: any }>("/pagos-gym", data)
+    return this.post<{ message: string; pago: any }>("/pagos-gym", data);
+  }
+
+  // Salidas (Gastos)
+  async getSalidas(params?: {
+    tipo?: string;
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    search?: string;
+    page?: number;
+    per_page?: number;
+  }) {
+    const urlParams = new URLSearchParams();
+    if (params?.tipo && params.tipo !== "todos")
+      urlParams.append("tipo", params.tipo);
+    if (params?.fecha_inicio)
+      urlParams.append("fecha_inicio", params.fecha_inicio);
+    if (params?.fecha_fin) urlParams.append("fecha_fin", params.fecha_fin);
+    if (params?.search) urlParams.append("search", params.search);
+    if (params?.page) urlParams.append("page", String(params.page));
+    if (params?.per_page) urlParams.append("per_page", String(params.per_page));
+
+    return this.get<{ salidas: any[]; meta: any; stats: any }>(
+      `/salidas-gym?${urlParams.toString()}`
+    );
+  }
+
+  async createSalida(data: any) {
+    return this.post<{ message: string; salida: any }>("/salidas-gym", data);
+  }
+
+  async updateSalida(id: string, data: any) {
+    return this.put<{ message: string; salida: any }>(
+      `/salidas-gym/${id}`,
+      data
+    );
+  }
+
+  async deleteSalida(id: string) {
+    return this.delete<{ message: string }>(`/salidas-gym/${id}`);
   }
 
   async getDashboardStats() {
@@ -309,10 +420,20 @@ class ApiClient {
         clasesHoy: number;
         reservasSemana: number;
         ingresosHoy: number;
+        salidasHoy: number;
+        balanceHoy: number;
       };
       charts: {
-        asistenciaSemanal: { day: string; visits: number; percentage: number }[];
-        clasesPopulares: { name: string; reservations: number; trend: string }[];
+        asistenciaSemanal: {
+          day: string;
+          visits: number;
+          percentage: number;
+        }[];
+        clasesPopulares: {
+          name: string;
+          reservations: number;
+          trend: string;
+        }[];
       };
       membershipOverview: {
         activas: number;

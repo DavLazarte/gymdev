@@ -30,17 +30,44 @@ export default function AsistenciasPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
+
+  // Pagination
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    lastPage: 1,
+    total: 0,
+    perPage: 15,
+  });
+
   const { toast } = useToast();
 
   useEffect(() => {
     loadAsistencias();
-  }, []);
+  }, [pagination.currentPage]);
 
   const loadAsistencias = async () => {
     setIsLoading(true);
     try {
-      const data = await api.getAsistencias();
-      setAsistencias(data);
+      const response: any = await api.getAsistencias({
+        page: pagination.currentPage,
+        per_page: pagination.perPage,
+      });
+
+      // Handle both old and new response formats if necessary, though now it should be standardized
+      if (response.asistencias) {
+        setAsistencias(response.asistencias);
+        if (response.meta) {
+          setPagination((prev) => ({
+            ...prev,
+            currentPage: response.meta.current_page,
+            lastPage: response.meta.last_page,
+            total: response.meta.total,
+          }));
+        }
+      } else {
+        // Fallback if API returns array directly (should not happen with new backend)
+        setAsistencias(Array.isArray(response) ? response : []);
+      }
     } catch (error) {
       console.error("Error cargando asistencias:", error);
     } finally {
@@ -230,11 +257,46 @@ export default function AsistenciasPage() {
           </Table>
         </div>
 
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            Mostrando {filteredAsistencias.length} de {asistencias.length}{" "}
-            asistencias
-          </span>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Mostrando {asistencias.length} de {pagination.total} asistencias
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setPagination((prev) => ({
+                  ...prev,
+                  currentPage: Math.max(1, prev.currentPage - 1),
+                }))
+              }
+              disabled={pagination.currentPage === 1 || isLoading}
+            >
+              Anterior
+            </Button>
+            <div className="flex items-center gap-1 mx-2 text-sm font-medium">
+              <span>Página</span>
+              <span className="text-foreground">{pagination.currentPage}</span>
+              <span>de</span>
+              <span>{pagination.lastPage}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setPagination((prev) => ({
+                  ...prev,
+                  currentPage: Math.min(prev.lastPage, prev.currentPage + 1),
+                }))
+              }
+              disabled={
+                pagination.currentPage === pagination.lastPage || isLoading
+              }
+            >
+              Siguiente
+            </Button>
+          </div>
         </div>
       </div>
 

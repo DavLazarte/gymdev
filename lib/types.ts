@@ -148,3 +148,18 @@ export interface Reserva {
     nombre: string
   }
 }
+
+export interface Salida {
+  id: string
+  monto: string
+  descripcion: string
+  tipo_salida: string
+  fecha: string
+  id_persona?: string
+  persona?: {
+    id: string
+    nombre: string
+  }
+  created_at?: string
+  updated_at?: string
+}

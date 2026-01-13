@@ -27,6 +27,8 @@ type DashboardStats = {
     clasesHoy: number;
     reservasSemana: number;
     ingresosHoy: number;
+    salidasHoy: number;
+    balanceHoy: number;
   };
   charts: {
     asistenciaSemanal: { day: string; visits: number; percentage: number }[];
@@ -94,7 +96,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Key Metrics */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -159,6 +161,50 @@ export default function AdminDashboardPage() {
               <p className="text-xs text-muted-foreground">
                 Cobros registrados hoy
               </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Salidas del Día
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground rotate-180 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                {new Intl.NumberFormat("es-AR", {
+                  style: "currency",
+                  currency: "ARS",
+                }).format(stats.metrics.salidasHoy)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Gastos registrados hoy
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Balance Diario
+              </CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div
+                className={`text-2xl font-bold ${
+                  stats.metrics.balanceHoy >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
+                {new Intl.NumberFormat("es-AR", {
+                  style: "currency",
+                  currency: "ARS",
+                }).format(stats.metrics.balanceHoy)}
+              </div>
+              <p className="text-xs text-muted-foreground">Neto hoy</p>
             </CardContent>
           </Card>
         </div>

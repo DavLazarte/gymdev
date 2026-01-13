@@ -28,6 +28,7 @@ import {
   Activity,
   DollarSign,
   Settings,
+  TrendingDown,
 } from "lucide-react";
 
 interface MobileNavProps {
@@ -64,6 +65,7 @@ export function MobileNav({ role }: MobileNavProps) {
     { href: "/admin/instructores", icon: UserCheck, label: "Instructores" },
     { href: "/admin/asistencias", icon: Activity, label: "Asistencias" },
     { href: "/admin/pagos", icon: DollarSign, label: "Pagos" },
+    { href: "/admin/salidas", icon: TrendingDown, label: "Gastos" },
     { href: "/admin/configuracion", icon: Settings, label: "Configuración" },
   ];
 
