@@ -48,18 +48,39 @@ export default function PagosPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEstado, setFilterEstado] = useState<string>("todos");
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
+  // Pagination
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    lastPage: 1,
+    total: 0,
+    perPage: 15,
+  });
+
   const { toast } = useToast();
 
   useEffect(() => {
     loadPagos();
-  }, []);
+  }, [pagination.currentPage]);
 
   const loadPagos = async () => {
     setIsLoading(true);
     try {
-      const response = await api.getPagos();
+      const response = await api.getPagos({
+        search: searchTerm,
+        page: pagination.currentPage,
+        per_page: pagination.perPage,
+      });
       setPagos(response.pagos || []);
       setDeudaTotal(response.deuda_total || 0);
+
+      if (response.meta) {
+        setPagination((prev) => ({
+          ...prev,
+          currentPage: response.meta.current_page,
+          lastPage: response.meta.last_page,
+          total: response.meta.total,
+        }));
+      }
     } catch (error) {
       console.error("Error loading pagos:", error);
       toast({
@@ -71,6 +92,14 @@ export default function PagosPage() {
       setIsLoading(false);
     }
   };
+
+  // Trigger search with debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      loadPagos();
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
 
   const handleRegisterPago = async (pagoData: any) => {
     try {
@@ -223,7 +252,7 @@ export default function PagosPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPagos.length === 0 ? (
+              {pagos.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center">
                     <p className="text-sm text-muted-foreground">
@@ -232,7 +261,7 @@ export default function PagosPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPagos.map((pago) => (
+                pagos.map((pago) => (
                   <TableRow key={pago.id}>
                     <TableCell>
                       <span className="text-sm text-foreground">
@@ -272,10 +301,46 @@ export default function PagosPage() {
         )}
       </div>
 
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>
-          Mostrando {filteredPagos.length} de {pagos.length} pagos
-        </span>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Mostrando {pagos.length} de {pagination.total} pagos
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setPagination((prev) => ({
+                ...prev,
+                currentPage: Math.max(1, prev.currentPage - 1),
+              }))
+            }
+            disabled={pagination.currentPage === 1 || isLoading}
+          >
+            Anterior
+          </Button>
+          <div className="flex items-center gap-1 mx-2 text-sm font-medium">
+            <span>Página</span>
+            <span className="text-foreground">{pagination.currentPage}</span>
+            <span>de</span>
+            <span>{pagination.lastPage}</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setPagination((prev) => ({
+                ...prev,
+                currentPage: Math.min(prev.lastPage, prev.currentPage + 1),
+              }))
+            }
+            disabled={
+              pagination.currentPage === pagination.lastPage || isLoading
+            }
+          >
+            Siguiente
+          </Button>
+        </div>
       </div>
 
       <PagoDialog
