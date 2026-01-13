@@ -56,7 +56,6 @@ export default function AdminReservationsPage() {
 
   useEffect(() => {
     loadData();
-    loadSocios();
   }, [selectedDate]);
 
   const loadData = async () => {
@@ -82,16 +81,24 @@ export default function AdminReservationsPage() {
     }
   };
 
-  const loadSocios = async () => {
+  const searchSocios = async (searchTerm: string) => {
+    if (!searchTerm || searchTerm.length < 2) {
+      setAllSocios([]);
+      return;
+    }
+
     try {
-      const response = await api.getSocios();
+      const response = await api.getSocios({
+        search: searchTerm,
+        per_page: 15,
+      });
       const mapped = (response?.socios || []).map((s: any) => ({
         ...s,
         id: String(s.id || s.idpersona),
       }));
       setAllSocios(mapped);
     } catch (error) {
-      console.error("Error loading socios:", error);
+      console.error("Error searching socios:", error);
     }
   };
 
@@ -195,13 +202,16 @@ export default function AdminReservationsPage() {
     }
   };
 
-  const filteredSocios = allSocios
-    .filter(
-      (s) =>
-        s.nombre.toLowerCase().includes(searchSocio.toLowerCase()) ||
-        s.dni?.includes(searchSocio)
-    )
-    .slice(0, 5); // Limitar a 5 resultados para la búsqueda rápida
+  // Trigger search when user types
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchSocios(searchSocio);
+    }, 300); // Debounce de 300ms
+
+    return () => clearTimeout(timer);
+  }, [searchSocio]);
+
+  const filteredSocios = allSocios; // Ya vienen filtrados del backend
 
   return (
     <div className="space-y-6">
@@ -323,27 +333,46 @@ export default function AdminReservationsPage() {
                           onChange={(e) => setSearchSocio(e.target.value)}
                         />
                       </div>
-                      <div className="space-y-2">
-                        {filteredSocios.map((socio) => (
-                          <div
-                            key={socio.id}
-                            className="flex items-center justify-between p-2 rounded-md border text-sm"
-                          >
-                            <span>{socio.nombre}</span>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleAddSocio(socio)}
-                              disabled={
-                                isAddingSocio ||
-                                selectedClass.inscritos >=
-                                  selectedClass.capacidad
-                              }
+                      <div className="max-h-[300px] overflow-y-auto space-y-2">
+                        {searchSocio.length < 2 ? (
+                          <p className="text-center py-8 text-sm text-muted-foreground">
+                            Escribe al menos 2 caracteres para buscar...
+                          </p>
+                        ) : filteredSocios.length === 0 ? (
+                          <p className="text-center py-8 text-sm text-muted-foreground">
+                            No se encontraron socios con ese criterio.
+                          </p>
+                        ) : (
+                          filteredSocios.map((socio) => (
+                            <div
+                              key={socio.id}
+                              className="flex items-center justify-between p-2 rounded-md border text-sm"
                             >
-                              Agregar
-                            </Button>
-                          </div>
-                        ))}
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {socio.nombre}
+                                </span>
+                                {socio.dni && (
+                                  <span className="text-xs text-muted-foreground">
+                                    DNI: {socio.dni}
+                                  </span>
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleAddSocio(socio)}
+                                disabled={
+                                  isAddingSocio ||
+                                  selectedClass.inscritos >=
+                                    selectedClass.capacidad
+                                }
+                              >
+                                Agregar
+                              </Button>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
                   </DialogContent>
