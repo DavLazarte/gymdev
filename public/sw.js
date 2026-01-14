@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vertice-gym-v1.13'; // IMPORTANTE: Cambiar versión
+const CACHE_NAME = 'vertice-gym-v1.14'; // IMPORTANTE: Cambiar versión
 const URLS_TO_CACHE = [
   '/',
   '/manifest.json',
@@ -10,7 +10,7 @@ const APP_ORIGIN = self.location.origin;
 
 // Instalación
 self.addEventListener('install', (event) => {
-  console.log('[SW] Instalando v1.13');
+  console.log('[SW] Instalando v1.14');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -23,7 +23,7 @@ self.addEventListener('install', (event) => {
 
 // Activación
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activando v1.13');
+  console.log('[SW] Activando v1.14');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
