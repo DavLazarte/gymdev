@@ -104,7 +104,7 @@ export function PlanDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{plan ? "Editar Plan" : "Nuevo Plan"}</DialogTitle>
           <DialogDescription>
@@ -228,7 +228,11 @@ export function PlanDialog({
 
             <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
               <div className="space-y-2">
-                <Label htmlFor="duracion">Vigencia (Días) *</Label>
+                <Label htmlFor="duracion">
+                  {formData.tipo_plan === "creditos"
+                    ? "Vigencia Máxima (Días) *"
+                    : "Vigencia (Días) *"}
+                </Label>
                 <div className="flex gap-2">
                   <Input
                     id="duracion"
@@ -269,7 +273,9 @@ export function PlanDialog({
                   </div>
                 </div>
                 <p className="text-[0.7rem] text-muted-foreground">
-                  Días de vigencia desde el momento de la asignación.
+                  {formData.tipo_plan === "creditos"
+                    ? "Tiempo máximo para usar los créditos desde la asignación. Los créditos vencen al agotar este plazo o al usarlos todos."
+                    : "Días de acceso ilimitado desde el momento de la asignación."}
                 </p>
               </div>
 
@@ -289,7 +295,7 @@ export function PlanDialog({
                     required={formData.tipo_plan === "creditos"}
                   />
                   <p className="text-[0.7rem] text-muted-foreground">
-                    Límite de usos dentro del periodo de vigencia.
+                    Número de clases o usos incluidos en este plan.
                   </p>
                 </div>
               )}

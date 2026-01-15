@@ -122,6 +122,10 @@ export function ClassCard({
                 <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
                   Inscripto
                 </Badge>
+              ) : classSession.clase_pasada ? (
+                <Badge variant="secondary" className="text-xs">
+                  Clase pasada
+                </Badge>
               ) : isFull ? (
                 <Badge variant="destructive" className="text-xs">
                   Completa
@@ -240,6 +244,7 @@ export function ClassCard({
                     disabled={
                       isFull ||
                       classSession.puede_reservar === false ||
+                      classSession.clase_pasada === true ||
                       (isBooked && !isDeleting) ||
                       isBooking
                     }
@@ -257,6 +262,8 @@ export function ClassCard({
                         <CheckCircle2 className="mr-1 h-4 w-4" />
                         Reservada
                       </>
+                    ) : classSession.clase_pasada ? (
+                      "Clase pasada"
                     ) : isFull ? (
                       "No disponible"
                     ) : classSession.puede_reservar === false ? (

@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { ClassSlot } from "@/lib/types";
 import { useRequireRole } from "@/hooks/useRequireRole";
-import { ChevronLeft, Filter, Loader2 } from "lucide-react";
+import { ChevronLeft, Filter, Loader2, History } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import Link from "next/link";
 
 export default function BookClassPage() {
@@ -44,6 +50,9 @@ export default function BookClassPage() {
 
   if (!user) return null;
 
+  const upcomingClasses = classes.filter((c) => !c.clase_pasada);
+  const pastClasses = classes.filter((c) => c.clase_pasada);
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4 text-foreground">
       <AppHeader
@@ -70,24 +79,65 @@ export default function BookClassPage() {
         </div>
 
         {/* Classes List */}
-        <div className="space-y-3">
-          {classes.map((classSession) => (
-            <ClassCard
-              key={classSession.id}
-              classSession={classSession}
-              showBookButton
-              onBooked={loadClasses}
-            />
-          ))}
+        <div className="space-y-6">
+          {/* Past Classes Accordion */}
+          {pastClasses.length > 0 && (
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="past-classes" className="border-none">
+                <AccordionTrigger className="flex items-center gap-2 px-4 py-2 hover:no-underline bg-muted/40 rounded-lg text-muted-foreground hover:text-foreground transition-colors">
+                  <div className="flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    <span className="text-sm font-medium">
+                      Ver clases anteriores ({pastClasses.length})
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-3">
+                  {pastClasses.map((classSession) => (
+                    <ClassCard
+                      key={classSession.id}
+                      classSession={classSession}
+                      showBookButton
+                      onBooked={loadClasses}
+                    />
+                  ))}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+
+          {/* Upcoming Classes */}
+          <div className="space-y-3">
+            {upcomingClasses.length > 0
+              ? upcomingClasses.map((classSession) => (
+                  <ClassCard
+                    key={classSession.id}
+                    classSession={classSession}
+                    showBookButton
+                    onBooked={loadClasses}
+                  />
+                ))
+              : upcomingClasses.length === 0 &&
+                !isLoading && (
+                  <div className="rounded-lg border border-dashed border-border p-8 text-center bg-muted/20">
+                    <h3 className="text-lg font-semibold text-foreground">
+                      No hay clases próximas
+                    </h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Prueba más tarde para nuevas sesiones
+                    </p>
+                  </div>
+                )}
+          </div>
         </div>
 
         {classes.length === 0 && !isLoading && (
           <div className="rounded-lg border border-dashed border-border p-8 text-center">
             <h3 className="text-lg font-semibold text-foreground">
-              No hay clases disponibles
+              No hay clases hoy
             </h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Prueba más tarde para nuevas sesiones
+              Vuelve pronto para ver la programación
             </p>
           </div>
         )}

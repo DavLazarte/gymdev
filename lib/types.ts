@@ -134,6 +134,7 @@ export interface ClassSlot {
   reservada: boolean
   estado_clase: string
   puede_reservar?: boolean
+  clase_pasada?: boolean
 }
 
 export interface Reserva {
