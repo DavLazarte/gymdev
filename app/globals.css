@@ -123,4 +123,14 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Performance optimizations */
+  img {
+    content-visibility: auto;
+  }
+
+  [data-radix-dialog-content],
+  [data-radix-popover-content] {
+    content-visibility: auto;
+  }
 }

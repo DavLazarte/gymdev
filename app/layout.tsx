@@ -5,9 +5,20 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
+import { InstallPWA } from "@/components/install-pwa";
+import { ServiceWorkerRegister } from "@/components/sw-register";
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const geistSans = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist-sans",
+  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Vertice Center - Gestión de Gimnasio",
@@ -48,38 +59,20 @@ export const viewport: Viewport = {
   ],
 };
 
-import { InstallPWA } from "@/components/install-pwa";
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                  }, function(err) {
-                    console.log('ServiceWorker registration failed: ', err);
-                  });
-                });
-              }
-            `,
-          }}
-        />
-      </head>
-      <body className={`font-sans antialiased`}>
+    <html lang="es" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="font-sans antialiased">
         <AuthProvider>
           {children}
           <InstallPWA />
           <Toaster />
           <Analytics />
+          <ServiceWorkerRegister />
         </AuthProvider>
       </body>
     </html>
