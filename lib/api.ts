@@ -1,4 +1,5 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const PROXY_URL = "/api/proxy"; // Ruta relativa a nuestro Next.js
 
 interface ApiError {
   message: string;
@@ -6,13 +7,20 @@ interface ApiError {
 }
 
 class ApiClient {
-  private baseUrl: string;
+  private directUrl: string;
   private token: string | null = null;
+  private useProxy: boolean = false;
+  private readonly MAX_RETRIES = 2; // Intentos extra tras fallo
 
   constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
+    this.directUrl = baseUrl;
     if (typeof window !== "undefined") {
       this.token = localStorage.getItem("auth_token");
+      // Recuperar estado de ISP problemático
+      this.useProxy = localStorage.getItem("force_proxy_mode") === "true";
+      if (this.useProxy) {
+          console.log("[ApiClient] Modo Proxy activado por defecto (ISP detectado previamente)");
+      }
     }
   }
 
@@ -30,50 +38,108 @@ class ApiClient {
     }
   }
 
+  // Detectar si el error parece ser bloqueo de ISP (CORS, Network Error, 415)
+  private isConnectionError(error: any, status?: number): boolean {
+    if (status === 415) return true; // Unsupported Media Type (común en firewalls que rompen headers)
+    const msg = error.message?.toLowerCase() || "";
+    return (
+        msg.includes("failed to fetch") || 
+        msg.includes("network error") || 
+        msg.includes("cors")
+    );
+  }
+
+  private async sleep(ms: number) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    retryCount = 0
   ): Promise<T> {
-    // Cambio aquí: usar Record<string, string> en lugar de HeadersInit
+    // Determinar URL base
+    const baseUrl = this.useProxy ? PROXY_URL : this.directUrl;
+    
+    // Headers base optimizados
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      Accept: "application/json",
+      "Accept": "application/json",
+      // Anti-cache headers para atravesar proxies corporativos
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0"
     };
 
-    // Agregar headers personalizados del options
     if (options.headers) {
       Object.assign(headers, options.headers);
     }
 
-    // Ahora sí puedes agregar Authorization sin problemas
     if (this.token) {
       headers["Authorization"] = `Bearer ${this.token}`;
     }
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    try {
+      const response = await fetch(`${baseUrl}${endpoint}`, {
+        ...options,
+        headers,
+      });
 
-    if (!response.ok) {
-      const error: ApiError = await response.json();
+      // Si nos da 415 o error de servidor en modo directo, podría ser el firewall
+      if (!this.useProxy && (response.status === 415)) {
+          throw new Error("Posible bloqueo de ISP (415)");
+      }
 
-      // Si hay errores de validación (422), formatearlos
-      if (error.errors && typeof error.errors === "object") {
-        const errorMessages = Object.values(error.errors).flat().join(", ");
-        const errorObj = new Error(
-          errorMessages || error.message || "Error en la petición"
-        );
+      if (!response.ok) {
+        // Si falló el proxy con 502/504, es fatal
+        if (this.useProxy && [502, 504].includes(response.status)) {
+            throw new Error("Error de conexión incluso vía Proxy");
+        }
+
+        const error: ApiError = await response.json().catch(() => ({ message: "Error desconocido" }));
+
+        // Manejo de errores de validación
+        if (error.errors && typeof error.errors === "object") {
+          const errorMessages = Object.values(error.errors).flat().join(", ");
+          const errorObj = new Error(
+            errorMessages || error.message || "Error en la petición"
+          );
+          (errorObj as any).status = response.status;
+          throw errorObj;
+        }
+
+        const errorObj = new Error(error.message || "Error en la petición");
         (errorObj as any).status = response.status;
         throw errorObj;
       }
 
-      const errorObj = new Error(error.message || "Error en la petición");
-      (errorObj as any).status = response.status;
-      throw errorObj;
-    }
+      return response.json();
 
-    return response.json();
+    } catch (error: any) {
+      // Lógica de recuperación
+      const isBlock = this.isConnectionError(error, (error as any).status);
+      
+      // Caso 1: Estábamos en directo y detectamos bloqueo -> Switch a Proxy y reintentar YA
+      if (!this.useProxy && isBlock) {
+          console.warn(`[ApiClient] Detectado bloqueo de ISP (${error.message}). Activando Proxy Fallback...`);
+          this.useProxy = true;
+          if (typeof window !== "undefined") {
+              localStorage.setItem("force_proxy_mode", "true");
+          }
+          // Reintentar inmediatamente con proxy
+          return this.request<T>(endpoint, options, retryCount);
+      }
+
+      // Caso 2: Backoff exponencial para errores transitorios
+      if (retryCount < this.MAX_RETRIES) {
+          const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s...
+          console.log(`[ApiClient] Reintentando petición (${retryCount + 1}/${this.MAX_RETRIES}) en ${delay}ms...`);
+          await this.sleep(delay);
+          return this.request<T>(endpoint, options, retryCount + 1);
+      }
+
+      throw error;
+    }
   }
 
   // Auth
@@ -125,6 +191,7 @@ class ApiClient {
     estado?: string;
     page?: number;
     per_page?: number;
+    tipo_persona?: string; // Agregado tipo_persona por si acaso
   }) {
     const urlParams = new URLSearchParams();
     if (params?.search) urlParams.append("search", params.search);
@@ -132,6 +199,7 @@ class ApiClient {
       urlParams.append("estado", params.estado);
     if (params?.page) urlParams.append("page", String(params.page));
     if (params?.per_page) urlParams.append("per_page", String(params.per_page));
+    if (params?.tipo_persona) urlParams.append("tipo_persona", params.tipo_persona);
 
     const queryString = urlParams.toString();
     return this.get<{ socios: any[]; meta: any }>(
@@ -180,6 +248,8 @@ class ApiClient {
     if (params?.search) urlParams.append("search", params.search);
     if (params?.per_page) urlParams.append("per_page", String(params.per_page));
     
+    // NOTA: Ajusté esto para usar getSocios si es posible, pero mantengo la lógica original
+    // para no romper nada, solo asegurando el cast correcto
     const response = await this.get<{ socios: any[]; meta: any }>(
       `/socios?${urlParams.toString()}`
     );
@@ -213,7 +283,6 @@ class ApiClient {
   }
 
   async createPlan(data: any) {
-    // Ensure tipo_servicio is set
     return this.post<{ message: string; servicio: any }>("/servicios", {
       ...data,
       tipo_servicio: "plan",
@@ -347,7 +416,8 @@ class ApiClient {
     const response = await this.get<{ asistencias: any[]; meta?: any }>(
       `/asistencias${urlParams.toString() ? `?${urlParams.toString()}` : ""}`
     );
-    return response.asistencias.length !== undefined ? response : { asistencias: response as any, meta: undefined };
+    // Corrección para evitar undefined
+    return response.asistencias ? response : { asistencias: response as any, meta: undefined };
   }
 
   // Pagos
@@ -439,6 +509,7 @@ class ApiClient {
         activas: number;
         por_vencer: number;
         vencidas: number;
+        por_vencer_7_dias?: number; // Agregado para soportar dashboards avanzados
       };
       ocupacion: {
         porcentaje: number;
