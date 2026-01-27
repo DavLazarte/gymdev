@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -43,15 +44,24 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function MembresiasPage() {
+  const searchParams = useSearchParams();
   const [membresias, setMembresias] = useState<Membresia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [estadoFilter, setEstadoFilter] = useState("todas");
+  const [estadoFilter, setEstadoFilter] = useState(
+    searchParams.get("estado") || "todas",
+  );
+  const [currentPage, setCurrentPage] = useState(1);
+  const [paginationData, setPaginationData] = useState<{
+    current_page: number;
+    last_page: number;
+    total: number;
+  } | null>(null);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPagoDialogOpen, setIsPagoDialogOpen] = useState(false);
   const [editingMembresia, setEditingMembresia] = useState<Membresia | null>(
-    null
+    null,
   );
   const [selectedMembresiaForPago, setSelectedMembresiaForPago] = useState<{
     id_persona: string;
@@ -62,12 +72,27 @@ export default function MembresiasPage() {
 
   const { toast } = useToast();
 
+  useEffect(() => {
+    const estado = searchParams.get("estado");
+    if (estado) {
+      setEstadoFilter(estado);
+    }
+  }, [searchParams]);
+
   const loadMembresias = async () => {
     setIsLoading(true);
     try {
-      const data = await api.getMembresias({
+      const response: any = await api.getMembresias({
         search: searchTerm,
         estado: estadoFilter,
+        page: currentPage,
+      });
+      // response es el objeto paginado ahora
+      const data = response.data || [];
+      setPaginationData({
+        current_page: response.current_page,
+        last_page: response.last_page,
+        total: response.total,
       });
       // Adaptar IDs para evitar errores de "key"
       const adaptedData = data.map((m: any) => ({
@@ -96,6 +121,11 @@ export default function MembresiasPage() {
       loadMembresias();
     }, 500);
     return () => clearTimeout(timer);
+  }, [searchTerm, estadoFilter, currentPage]);
+
+  // Reset pagina al cambiar filtros
+  useEffect(() => {
+    setCurrentPage(1);
   }, [searchTerm, estadoFilter]);
 
   const handleSave = async (formData: any) => {
@@ -166,7 +196,10 @@ export default function MembresiasPage() {
     }
   };
 
-  const getStatusBadge = (estado: Membresia["estado"]) => {
+  const getStatusBadge = (m: Membresia) => {
+    // Usar estado calculado si existe, sino fallback a estado normal
+    const estado = m.computed_status || m.estado;
+
     switch (estado) {
       case "activa":
         return (
@@ -312,7 +345,7 @@ export default function MembresiasPage() {
                           )}
                       </div>
                     </TableCell>
-                    <TableCell>{getStatusBadge(m.estado)}</TableCell>
+                    <TableCell>{getStatusBadge(m)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
@@ -357,6 +390,34 @@ export default function MembresiasPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Pagination Controls */}
+      {paginationData && (
+        <div className="flex items-center justify-between py-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1 || isLoading}
+          >
+            Anterior
+          </Button>
+          <div className="text-sm text-muted-foreground">
+            Página {currentPage} de {paginationData.last_page} (
+            {paginationData.total} registros)
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setCurrentPage((p) => Math.min(paginationData.last_page, p + 1))
+            }
+            disabled={currentPage === paginationData.last_page || isLoading}
+          >
+            Siguiente
+          </Button>
+        </div>
+      )}
 
       <MembresiaDialog
         open={isDialogOpen}

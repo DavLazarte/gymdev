@@ -18,6 +18,7 @@ import {
   Activity,
   Loader2,
 } from "lucide-react";
+import Link from "next/link";
 import { useRequireRole } from "@/hooks/useRequireRole";
 import { api } from "@/lib/api";
 
@@ -291,26 +292,35 @@ export default function AdminDashboardPage() {
               <CardDescription>Estado de los socios</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="flex justify-between text-sm">
+              <Link
+                href="/admin/membresias?estado=activa"
+                className="flex justify-between text-sm hover:bg-muted/50 p-1 rounded transition-colors -mx-1 px-2 cursor-pointer"
+              >
                 <span className="text-muted-foreground">Activas</span>
                 <span className="font-semibold text-primary">
                   {stats.membershipOverview.activas}
                 </span>
-              </div>
-              <div className="flex justify-between text-sm">
+              </Link>
+              <Link
+                href="/admin/membresias?estado=por_vencer"
+                className="flex justify-between text-sm hover:bg-muted/50 p-1 rounded transition-colors -mx-1 px-2 cursor-pointer"
+              >
                 <span className="text-muted-foreground">
                   Por vencer (7 días)
                 </span>
                 <span className="font-semibold text-yellow-600 dark:text-yellow-500">
                   {stats.membershipOverview.por_vencer}
                 </span>
-              </div>
-              <div className="flex justify-between text-sm">
+              </Link>
+              <Link
+                href="/admin/membresias?estado=vencida"
+                className="flex justify-between text-sm hover:bg-muted/50 p-1 rounded transition-colors -mx-1 px-2 cursor-pointer"
+              >
                 <span className="text-muted-foreground">Vencidas</span>
                 <span className="font-semibold text-destructive">
                   {stats.membershipOverview.vencidas}
                 </span>
-              </div>
+              </Link>
             </CardContent>
           </Card>
 

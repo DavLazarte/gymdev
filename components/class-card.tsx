@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,8 @@ import {
   Loader2,
   Trash2,
   ChevronDown,
+  Flame,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,17 +36,23 @@ interface ClassCardProps {
   classSession: ClassSlot;
   showBookButton?: boolean;
   onBooked?: () => void;
+  currentUserType?: "cliente" | "instructor";
 }
 
 export function ClassCard({
   classSession,
   showBookButton = false,
   onBooked,
+  currentUserType,
 }: ClassCardProps) {
   const [showDialog, setShowDialog] = useState(false);
+  const [showAttendanceDialog, setShowAttendanceDialog] = useState(false);
+  const [selectedAlumno, setSelectedAlumno] = useState<any>(null);
+  const [isMarkingAttendance, setIsMarkingAttendance] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showAlumnos, setShowAlumnos] = useState(false);
+  const isProcessingRef = useRef(false); // Guard para evitar doble tap real
   const { toast } = useToast();
 
   const parseDateToLocal = (dateStr: string) => {
@@ -58,7 +66,10 @@ export function ClassCard({
   const isBooked = classSession.reservada;
 
   const handleBook = async () => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     setIsBooking(true);
+
     try {
       await api.createReserva({
         id_clase_gym: classSession.clase_id,
@@ -76,6 +87,7 @@ export function ClassCard({
         description: error.message || "No se pudo procesar tu reserva.",
       });
     } finally {
+      isProcessingRef.current = false;
       setIsBooking(false);
       setShowDialog(false);
     }
@@ -99,6 +111,32 @@ export function ClassCard({
       });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleMarkAttendance = async () => {
+    if (!selectedAlumno || isMarkingAttendance) return;
+    setIsMarkingAttendance(true);
+    try {
+      await api.marcarAsistencia({
+        id_persona: selectedAlumno.id_persona,
+        id_reserva: selectedAlumno.id,
+      });
+      toast({
+        title: "Asistencia registrada",
+        description: `${selectedAlumno.nombre} ha sido marcado como presente.`,
+      });
+      onBooked?.();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "No se pudo registrar la asistencia.",
+      });
+    } finally {
+      setIsMarkingAttendance(false);
+      setShowAttendanceDialog(false);
+      setSelectedAlumno(null);
     }
   };
 
@@ -162,7 +200,7 @@ export function ClassCard({
                     {
                       day: "numeric",
                       month: "short",
-                    }
+                    },
                   )}
                 </span>
               </div>
@@ -176,7 +214,7 @@ export function ClassCard({
                   <ChevronDown
                     className={cn(
                       "h-3 w-3 transition-transform",
-                      showAlumnos && "rotate-180"
+                      showAlumnos && "rotate-180",
                     )}
                   />
                 </button>
@@ -190,22 +228,54 @@ export function ClassCard({
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {classSession.alumnos.map((alumno, i) => (
-                    <div key={i} className="flex flex-col items-center gap-1">
-                      <Avatar className="h-8 w-8 border-2 border-background ring-1 ring-border">
-                        <AvatarImage
-                          src={alumno.foto}
-                          alt={alumno.nombre}
-                          className="object-cover"
-                        />
-                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                          {alumno.nombre
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
+                    <div
+                      key={i}
+                      className={cn(
+                        "flex flex-col items-center gap-1 relative",
+                        currentUserType === "instructor" &&
+                          alumno.estado_asistencia !== "asistio" &&
+                          "cursor-pointer hover:scale-105 transition-transform",
+                      )}
+                      onClick={() => {
+                        if (
+                          currentUserType === "instructor" &&
+                          alumno.estado_asistencia !== "asistio"
+                        ) {
+                          setSelectedAlumno(alumno);
+                          setShowAttendanceDialog(true);
+                        }
+                      }}
+                    >
+                      <div className="relative">
+                        <Avatar className="h-8 w-8 border-2 border-background ring-1 ring-border">
+                          <AvatarImage
+                            src={alumno.foto}
+                            alt={alumno.nombre}
+                            className="object-cover"
+                          />
+                          <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                            {alumno.nombre
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()
+                              .slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        {alumno.estado_asistencia === "asistio" && (
+                          <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5 border border-background">
+                            <Check className="h-2 w-2 text-white" />
+                          </div>
+                        )}
+                        {alumno.racha_actual && alumno.racha_actual > 0 && (
+                          <div className="absolute -bottom-1 -right-1 bg-orange-100 dark:bg-orange-950 rounded-full px-1 border border-orange-200 dark:border-orange-800 flex items-center gap-0.5">
+                            <Flame className="h-2 w-2 text-orange-500 fill-orange-500" />
+                            <span className="text-[7px] font-bold text-orange-600 dark:text-orange-400">
+                              {alumno.racha_actual}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                       <span className="text-[10px] text-muted-foreground max-w-[60px] truncate text-center leading-tight">
                         {alumno.nombre.split(" ")[0]}
                       </span>
@@ -252,7 +322,7 @@ export function ClassCard({
                     className={cn(
                       "h-8",
                       isBooked &&
-                        "bg-primary/20 text-primary hover:bg-primary/20 border-primary/20"
+                        "bg-primary/20 text-primary hover:bg-primary/20 border-primary/20",
                     )}
                   >
                     {isBooking ? (
@@ -291,7 +361,7 @@ export function ClassCard({
                 {
                   day: "numeric",
                   month: "long",
-                }
+                },
               )}{" "}
               a las {classSession.hora}?
             </AlertDialogDescription>
@@ -306,6 +376,39 @@ export function ClassCard({
               disabled={isBooking}
             >
               Confirmar reserva
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={showAttendanceDialog}
+        onOpenChange={setShowAttendanceDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Marcar Asistencia</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Deseas marcar a <strong>{selectedAlumno?.nombre}</strong> como
+              presente en la clase de <strong>{classSession.nombre}</strong>?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isMarkingAttendance}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleMarkAttendance();
+              }}
+              disabled={isMarkingAttendance}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isMarkingAttendance ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Confirmar Asistencia"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

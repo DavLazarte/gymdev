@@ -20,7 +20,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Search, Info } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Loader2, Search, Info, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import type { Socio, Membresia } from "@/lib/types";
 
@@ -44,6 +58,7 @@ export function PagoDialog({
   const [socios, setSocios] = useState<Socio[]>([]);
   const [membresias, setMembresias] = useState<any[]>([]);
   const [socioSearch, setSocioSearch] = useState("");
+  const [openCombobox, setOpenCombobox] = useState(false);
 
   const [formData, setFormData] = useState({
     id_persona: "",
@@ -56,7 +71,7 @@ export function PagoDialog({
 
   useEffect(() => {
     if (open) {
-      loadSocios();
+      loadSocios("");
       // Si recibimos IDs iniciales, los seteamos
       setFormData((prev) => ({
         ...prev,
@@ -75,10 +90,18 @@ export function PagoDialog({
     }
   }, [formData.id_persona]);
 
-  const loadSocios = async () => {
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (open) loadSocios(socioSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [socioSearch, open]);
+
+  const loadSocios = async (search = "") => {
     setIsFetching(true);
     try {
-      const response = await api.getSocios();
+      const response = await api.getSocios({ search, per_page: 50 }); // Bring more results for search
       const mappedSocios = (response?.socios || []).map((s: any) => ({
         ...s,
         id: String(s.id || s.idpersona),
@@ -93,12 +116,15 @@ export function PagoDialog({
 
   const loadMembresias = async (socioId: string) => {
     try {
-      const data = await api.getMembresias({ id_socio: socioId });
+      const response: any = await api.getMembresias({ id_socio: socioId });
+      const data = response.data || [];
       setMembresias(data);
 
       // Si tenemos un initialMembresiaId, buscamos su monto
       if (initialMembresiaId) {
-        const target = data.find((m) => String(m.id) === initialMembresiaId);
+        const target = data.find(
+          (m: any) => String(m.id) === initialMembresiaId,
+        );
         if (target) {
           setFormData((prev) => ({
             ...prev,
@@ -113,7 +139,7 @@ export function PagoDialog({
       }
 
       // De lo contrario, auto-seleccionar activa si existe
-      const activa = data.find((m) => m.estado === "activa");
+      const activa = data.find((m: any) => m.estado === "activa");
       if (activa) {
         setFormData((prev) => ({
           ...prev,
@@ -128,10 +154,6 @@ export function PagoDialog({
       console.error("Error loading membresias:", error);
     }
   };
-
-  const filteredSocios = socios.filter((s) =>
-    s.nombre.toLowerCase().includes(socioSearch.toLowerCase())
-  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,206 +193,235 @@ export function PagoDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {isFetching ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="id_persona">Socio *</Label>
-              <Select
-                value={formData.id_persona}
-                onValueChange={(value) =>
-                  setFormData({
-                    ...formData,
-                    id_persona: value,
-                    id_membresia: "",
-                  })
-                }
-                required
-              >
-                <SelectTrigger id="id_persona">
-                  <SelectValue placeholder="Seleccionar socio" />
-                </SelectTrigger>
-                <SelectContent>
-                  <div className="flex items-center border-b px-3 pb-2 sticky top-0 bg-popover z-10">
-                    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                    <input
-                      className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
-                      placeholder="Buscar socio..."
-                      value={socioSearch}
-                      onChange={(e) => setSocioSearch(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                  <div className="max-h-[200px] overflow-y-auto">
-                    {filteredSocios.map((socio) => (
-                      <SelectItem key={socio.id} value={socio.id}>
-                        {socio.nombre}
-                      </SelectItem>
-                    ))}
-                  </div>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="id_membresia">Membresía *</Label>
-              <Select
-                value={formData.id_membresia}
-                onValueChange={(value) => {
-                  const m = membresias.find(
-                    (item) => String(item.id) === value
-                  );
-                  setFormData({
-                    ...formData,
-                    id_membresia: value,
-                    monto:
-                      m?.saldo_pendiente?.toString() ||
-                      m?.plan?.precio?.toString() ||
-                      "",
-                  });
-                }}
-                disabled={!formData.id_persona || membresias.length === 0}
-                required
-              >
-                <SelectTrigger id="id_membresia">
-                  <SelectValue
-                    placeholder={
-                      formData.id_persona
-                        ? "Seleccionar membresía"
-                        : "Primero selecciona un socio"
-                    }
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="id_persona">Socio *</Label>
+            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={openCombobox}
+                  className="w-full justify-between"
+                >
+                  {formData.id_persona
+                    ? socios.find((s) => String(s.id) === formData.id_persona)
+                        ?.nombre || "Socio seleccionado"
+                    : "Seleccionar socio..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0">
+                <Command shouldFilter={false}>
+                  <CommandInput
+                    placeholder="Buscar socio..."
+                    value={socioSearch}
+                    onValueChange={setSocioSearch}
                   />
-                </SelectTrigger>
-                <SelectContent>
-                  {membresias.map((m) => (
-                    <SelectItem key={m.id} value={String(m.id)}>
-                      {m.plan?.nombre} ({m.estado})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {formData.id_membresia && (
-                <div className="flex flex-col gap-1 mt-2 p-2 rounded bg-amber-50 border border-amber-100">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-amber-700 font-medium">
-                      Costo Total:
-                    </span>
-                    <span className="text-amber-900">
-                      $
-                      {membresias.find(
-                        (m) => String(m.id) === formData.id_membresia
-                      )?.monto_total ?? "0"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-amber-700">Saldo Pendiente:</span>
-                    <span className="text-destructive">
-                      $
-                      {membresias.find(
-                        (m) => String(m.id) === formData.id_membresia
-                      )?.saldo_pendiente ?? "0"}
-                    </span>
-                  </div>
+                  <CommandList>
+                    {isFetching && (
+                      <div className="py-6 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Buscando...
+                      </div>
+                    )}
+
+                    {!isFetching && socios.length === 0 && (
+                      <CommandEmpty>No se encontraron socios.</CommandEmpty>
+                    )}
+
+                    {!isFetching && (
+                      <CommandGroup>
+                        {socios.map((socio) => (
+                          <CommandItem
+                            key={socio.id}
+                            value={String(socio.id)} // Use ID as value for uniqueness
+                            onSelect={(currentValue) => {
+                              // currentValue might be normalized text, but we want the ID.
+                              // Actually cmdk passes the value prop if set, or textContent.
+                              // Let's trust we get the ID because we set value={String(socio.id)}.
+                              // If cmdk normalizes, it might be lowercase.
+                              // Better access selection by scope or key?
+                              // Safe pattern: Use the ID from closure `socio.id`.
+                              setFormData({
+                                ...formData,
+                                id_persona: String(socio.id),
+                                id_membresia: "",
+                              });
+                              setOpenCombobox(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.id_persona === String(socio.id)
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {socio.nombre}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="id_membresia">Membresía *</Label>
+            <Select
+              value={formData.id_membresia}
+              onValueChange={(value) => {
+                const m = membresias.find((item) => String(item.id) === value);
+                setFormData({
+                  ...formData,
+                  id_membresia: value,
+                  monto:
+                    m?.saldo_pendiente?.toString() ||
+                    m?.plan?.precio?.toString() ||
+                    "",
+                });
+              }}
+              disabled={!formData.id_persona || membresias.length === 0}
+              required
+            >
+              <SelectTrigger id="id_membresia">
+                <SelectValue
+                  placeholder={
+                    formData.id_persona
+                      ? "Seleccionar membresía"
+                      : "Primero selecciona un socio"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {membresias.map((m) => (
+                  <SelectItem key={m.id} value={String(m.id)}>
+                    {m.plan?.nombre} ({m.estado})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {formData.id_membresia && (
+              <div className="flex flex-col gap-1 mt-2 p-2 rounded bg-amber-50 border border-amber-100">
+                <div className="flex justify-between text-xs">
+                  <span className="text-amber-700 font-medium">
+                    Costo Total:
+                  </span>
+                  <span className="text-amber-900">
+                    $
+                    {membresias.find(
+                      (m) => String(m.id) === formData.id_membresia,
+                    )?.monto_total ?? "0"}
+                  </span>
                 </div>
-              )}
-              {formData.id_persona && membresias.length === 0 && (
-                <p className="text-xs text-destructive flex items-center gap-1 mt-1">
-                  <Info className="h-3 w-3" /> Este socio no tiene membresías
-                  registradas.
-                </p>
-              )}
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="monto">Monto ($) *</Label>
-                <Input
-                  id="monto"
-                  type="number"
-                  step="0.01"
-                  value={formData.monto}
-                  onChange={(e) =>
-                    setFormData({ ...formData, monto: e.target.value })
-                  }
-                  placeholder="0.00"
-                  required
-                />
+                <div className="flex justify-between text-xs font-bold">
+                  <span className="text-amber-700">Saldo Pendiente:</span>
+                  <span className="text-destructive">
+                    $
+                    {membresias.find(
+                      (m) => String(m.id) === formData.id_membresia,
+                    )?.saldo_pendiente ?? "0"}
+                  </span>
+                </div>
               </div>
+            )}
+            {formData.id_persona && membresias.length === 0 && (
+              <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                <Info className="h-3 w-3" /> Este socio no tiene membresías
+                registradas.
+              </p>
+            )}
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="fecha_pago">Fecha *</Label>
-                <Input
-                  id="fecha_pago"
-                  type="date"
-                  value={formData.fecha_pago}
-                  onChange={(e) =>
-                    setFormData({ ...formData, fecha_pago: e.target.value })
-                  }
-                  required
-                />
-              </div>
-            </div>
-
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="metodo_pago">Método de pago *</Label>
-              <Select
-                value={formData.metodo_pago}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, metodo_pago: value })
-                }
-              >
-                <SelectTrigger id="metodo_pago">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="efectivo">Efectivo</SelectItem>
-                  <SelectItem value="tarjeta">Tarjeta</SelectItem>
-                  <SelectItem value="transferencia">Transferencia</SelectItem>
-                  <SelectItem value="mercadopago">Mercado Pago</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="observaciones">Observaciones</Label>
+              <Label htmlFor="monto">Monto ($) *</Label>
               <Input
-                id="observaciones"
-                value={formData.observaciones}
+                id="monto"
+                type="number"
+                step="0.01"
+                value={formData.monto}
                 onChange={(e) =>
-                  setFormData({ ...formData, observaciones: e.target.value })
+                  setFormData({ ...formData, monto: e.target.value })
                 }
-                placeholder="Dato adicional del pago..."
+                placeholder="0.00"
+                required
               />
             </div>
 
-            <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isLoading}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={isLoading || !formData.id_membresia}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Registrando...
-                  </>
-                ) : (
-                  "Registrar Pago"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        )}
+            <div className="space-y-2">
+              <Label htmlFor="fecha_pago">Fecha *</Label>
+              <Input
+                id="fecha_pago"
+                type="date"
+                value={formData.fecha_pago}
+                onChange={(e) =>
+                  setFormData({ ...formData, fecha_pago: e.target.value })
+                }
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="metodo_pago">Método de pago *</Label>
+            <Select
+              value={formData.metodo_pago}
+              onValueChange={(value) =>
+                setFormData({ ...formData, metodo_pago: value })
+              }
+            >
+              <SelectTrigger id="metodo_pago">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="efectivo">Efectivo</SelectItem>
+                <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                <SelectItem value="transferencia">Transferencia</SelectItem>
+                <SelectItem value="mercadopago">Mercado Pago</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="observaciones">Observaciones</Label>
+            <Input
+              id="observaciones"
+              value={formData.observaciones}
+              onChange={(e) =>
+                setFormData({ ...formData, observaciones: e.target.value })
+              }
+              placeholder="Dato adicional del pago..."
+            />
+          </div>
+
+          <DialogFooter className="pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isLoading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={isLoading || !formData.id_membresia}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Registrando...
+                </>
+              ) : (
+                "Registrar Pago"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

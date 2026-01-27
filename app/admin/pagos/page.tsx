@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -204,22 +205,26 @@ export default function PagosPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Info className="h-4 w-4" />
-              Deuda Pendiente
-            </CardTitle>
-            <CardDescription>Saldos sin cobrar</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-destructive">
-              $
-              {deudaTotal.toLocaleString("es-ES", { minimumFractionDigits: 2 })}
-            </div>
-            <p className="text-xs text-muted-foreground">Total por cobrar</p>
-          </CardContent>
-        </Card>
+        <Link href="/admin/membresias?estado=con_deuda" className="block">
+          <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Info className="h-4 w-4" />
+                Deuda Pendiente
+              </CardTitle>
+              <CardDescription>Saldos sin cobrar</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-destructive">
+                $
+                {deudaTotal.toLocaleString("es-ES", {
+                  minimumFractionDigits: 2,
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">Total por cobrar</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row">

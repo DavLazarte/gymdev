@@ -38,6 +38,7 @@ export interface Membresia {
   saldo_pendiente?: number
   socio?: Socio
   plan?: Plan
+  computed_status?: "activa" | "vencida" | "por_vencer"
 }
 
 export interface Plan {
@@ -129,7 +130,16 @@ export interface ClassSlot {
   duracion: number
   capacidad: number
   inscritos: number
-  alumnos: { nombre: string; foto?: string }[]
+  alumnos: { 
+    id: string; 
+    id_persona: string; 
+    nombre: string; 
+    foto?: string; 
+    tipo_persona?: string;
+    estado_asistencia?: string;
+    dni?: string;
+    racha_actual?: number;
+  }[]
   disponibles: number
   reservada: boolean
   estado_clase: string

@@ -21,8 +21,10 @@ import {
   Trash2,
   CheckCircle2,
   UserCheck,
+  Flame,
 } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export default function ClientDashboardPage() {
   const [profile, setProfile] = useState<any>(null);
@@ -112,14 +114,32 @@ export default function ClientDashboardPage() {
       />
 
       <main className="container mx-auto max-w-2xl space-y-6 p-4">
-        {/* Welcome Section */}
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-foreground">
-            Hola, {profile.nombre.split(" ")[0]}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Bienvenido a tu panel de control
-          </p>
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-foreground">
+              Hola, {profile.nombre.split(" ")[0]}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Bienvenido a tu panel de control
+            </p>
+          </div>
+
+          <div className="flex flex-col items-center justify-center bg-orange-100 dark:bg-orange-950/30 px-4 py-2 rounded-xl border border-orange-200 dark:border-orange-900">
+            <div className="flex items-center gap-1">
+              <Flame
+                className={cn(
+                  "h-6 w-6 text-orange-500",
+                  profile.racha_actual > 0 && "fill-orange-500 animate-pulse",
+                )}
+              />
+              <span className="text-2xl font-black text-orange-600 dark:text-orange-500">
+                {profile.racha_actual || 0}
+              </span>
+            </div>
+            <span className="text-[10px] font-bold text-orange-600/70 dark:text-orange-400 uppercase tracking-wider">
+              Racha Días
+            </span>
+          </div>
         </div>
 
         {/* Membership Status Card (Conditional) */}
@@ -194,7 +214,7 @@ export default function ClientDashboardPage() {
                 <p className="text-sm font-semibold text-foreground">
                   {profile.membresia?.vencimiento
                     ? new Date(
-                        profile.membresia.vencimiento
+                        profile.membresia.vencimiento,
                       ).toLocaleDateString("es-ES", {
                         day: "numeric",
                         month: "long",
@@ -252,7 +272,7 @@ export default function ClientDashboardPage() {
                         <Calendar className="h-3 w-3" />
                         {new Date(reserva.fecha_reserva).toLocaleDateString(
                           "es-ES",
-                          { day: "numeric", month: "short" }
+                          { day: "numeric", month: "short" },
                         )}
                       </span>
                       <span className="flex items-center gap-1">

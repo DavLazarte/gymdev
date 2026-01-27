@@ -24,6 +24,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { es } from "date-fns/locale";
 
 export default function AttendancePage() {
   const [user, setUser] = useState<any>(null);
@@ -71,7 +72,8 @@ export default function AttendancePage() {
         : historyData.asistencias || [];
 
       setAllAssistances(historyList);
-      calculateStreak(historyList);
+      // calculateStreak is removed, we use profile.racha_actual from api.getProfile()
+      setStreakCount(profileData.socio.racha_actual || 0);
 
       // 3. Get First Page for List (limit 5)
       const listData: any = await api.getAsistencias({ page: 1, per_page: 5 });
@@ -121,54 +123,6 @@ export default function AttendancePage() {
     }
   };
 
-  // Simple Streak Calculation: Consecutive days present (descending order list)
-  const calculateStreak = (list: any[]) => {
-    if (!list.length) return;
-
-    // Extract unique dates (YYYY-MM-DD)
-    const dates = Array.from(
-      new Set(list.map((a) => a.fecha_asistencia.split("T")[0]))
-    )
-      .sort()
-      .reverse();
-
-    let currentStreak = 0;
-    const today = new Date().toISOString().split("T")[0];
-    const yesterday = new Date(Date.now() - 86400000)
-      .toISOString()
-      .split("T")[0];
-
-    // Check if attended today or yesterday to start the streak
-    if (dates.includes(today)) {
-      currentStreak++;
-      // Count backwards from today
-      let checkDate = new Date(today);
-      while (true) {
-        checkDate.setDate(checkDate.getDate() - 1);
-        const dateString = checkDate.toISOString().split("T")[0];
-        if (dates.includes(dateString)) {
-          currentStreak++;
-        } else {
-          break;
-        }
-      }
-    } else if (dates.includes(yesterday)) {
-      currentStreak++;
-      let checkDate = new Date(yesterday);
-      while (true) {
-        checkDate.setDate(checkDate.getDate() - 1);
-        const dateString = checkDate.toISOString().split("T")[0];
-        if (dates.includes(dateString)) {
-          currentStreak++;
-        } else {
-          break;
-        }
-      }
-    }
-
-    setStreakCount(currentStreak);
-  };
-
   const getDaysWithAttendance = () => {
     return allAssistances.map((a) => new Date(a.fecha_asistencia));
   };
@@ -216,7 +170,7 @@ export default function AttendancePage() {
               <Flame
                 className={cn(
                   "h-6 w-6 text-orange-500",
-                  streakCount > 0 && "fill-orange-500 animate-pulse"
+                  streakCount > 0 && "fill-orange-500 animate-pulse",
                 )}
               />
               <span className="text-2xl font-black text-orange-600 dark:text-orange-500">
@@ -236,6 +190,7 @@ export default function AttendancePage() {
               mode="multiple"
               selected={getDaysWithAttendance()}
               className="rounded-md border bg-card shadow-sm"
+              locale={es}
               // En react-day-picker v9, personalizamos la celda con el componente Day
               components={{
                 Day: ({ day, modifiers, ...props }) => {
@@ -247,7 +202,7 @@ export default function AttendancePage() {
                           className={cn(
                             "text-sm",
                             isSelected &&
-                              "font-bold text-orange-600 dark:text-orange-500"
+                              "font-bold text-orange-600 dark:text-orange-500",
                           )}
                         >
                           {day.date.getDate()}
@@ -299,7 +254,7 @@ export default function AttendancePage() {
                     <p className="text-xs text-muted-foreground capitalize">
                       {new Date(attendance.fecha_asistencia).toLocaleDateString(
                         "es-ES",
-                        { weekday: "long", month: "long" }
+                        { weekday: "long", month: "long" },
                       )}
                     </p>
                   </div>
@@ -307,7 +262,7 @@ export default function AttendancePage() {
                   <div className="text-xs font-medium bg-secondary px-2 py-1 rounded-md text-secondary-foreground">
                     {new Date(attendance.fecha_asistencia).toLocaleTimeString(
                       "es-ES",
-                      { hour: "2-digit", minute: "2-digit" }
+                      { hour: "2-digit", minute: "2-digit" },
                     )}
                   </div>
                 </div>

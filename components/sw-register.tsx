@@ -22,6 +22,15 @@ export function ServiceWorkerRegister() {
           .catch((err) => {
             console.log("ServiceWorker registration failed:", err);
           });
+
+        // Force reload when new SW takes control
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
       });
     }
   }, []);

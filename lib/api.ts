@@ -305,18 +305,20 @@ class ApiClient {
     id_socio?: string;
     estado?: string;
     search?: string;
+    page?: number;
   }) {
     const urlParams = new URLSearchParams();
     if (params?.id_socio) urlParams.append("id_socio", params.id_socio);
     if (params?.estado && params.estado !== "todas")
       urlParams.append("estado", params.estado);
     if (params?.search) urlParams.append("search", params.search);
+    if (params?.page) urlParams.append("page", String(params.page));
 
     const queryString = urlParams.toString();
-    const response = await this.get<{ membresias: any[] }>(
+    // Retorna objeto paginado directamente (Laravel standard pagination)
+    return this.get<{ data: any[]; current_page: number; last_page: number; total: number }>(
       `/membresias${queryString ? `?${queryString}` : ""}`
     );
-    return response.membresias;
   }
 
   async createMembresia(data: {

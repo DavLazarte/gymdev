@@ -21,6 +21,7 @@ export default function BookClassPage() {
   const { user, loading: roleLoading } = useRequireRole("gym_socio");
   const [classes, setClasses] = useState<ClassSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     if (user) {
@@ -31,8 +32,12 @@ export default function BookClassPage() {
   const loadClasses = async () => {
     try {
       setIsLoading(true);
-      const data = await api.getAvailableClasses();
-      setClasses(data);
+      const [classesData, profileData] = await Promise.all([
+        api.getAvailableClasses(),
+        api.getProfile(),
+      ]);
+      setClasses(classesData);
+      setProfile(profileData.socio);
     } catch (error) {
       console.error("Error loading classes:", error);
     } finally {
@@ -99,6 +104,7 @@ export default function BookClassPage() {
                       classSession={classSession}
                       showBookButton
                       onBooked={loadClasses}
+                      currentUserType={profile?.tipo_persona}
                     />
                   ))}
                 </AccordionContent>
@@ -115,10 +121,10 @@ export default function BookClassPage() {
                     classSession={classSession}
                     showBookButton
                     onBooked={loadClasses}
+                    currentUserType={profile?.tipo_persona}
                   />
                 ))
-              : upcomingClasses.length === 0 &&
-                !isLoading && (
+              : !isLoading && (
                   <div className="rounded-lg border border-dashed border-border p-8 text-center bg-muted/20">
                     <h3 className="text-lg font-semibold text-foreground">
                       No hay clases próximas
