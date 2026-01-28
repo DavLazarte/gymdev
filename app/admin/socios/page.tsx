@@ -40,6 +40,7 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { Socio } from "@/lib/types";
 import { api } from "@/lib/api";
+import { formatLocalDate } from "@/lib/utils";
 
 export default function SociosPage() {
   const [socios, setSocios] = useState<Socio[]>([]);
@@ -349,9 +350,7 @@ export default function SociosPage() {
                     <TableCell>
                       <span className="text-sm text-foreground">
                         {socio.fechaVencimiento
-                          ? new Date(socio.fechaVencimiento).toLocaleDateString(
-                              "es-ES"
-                            )
+                          ? formatLocalDate(socio.fechaVencimiento)
                           : "Sin membresía"}
                       </span>
                     </TableCell>

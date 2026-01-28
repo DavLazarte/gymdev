@@ -27,6 +27,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
+import { formatLocalDate } from "@/lib/utils";
 import type { Membresia } from "@/lib/types";
 import { MembresiaDialog } from "@/components/membresia-dialog";
 import { PagoDialog } from "@/components/pago-dialog";
@@ -320,7 +321,7 @@ export default function MembresiasPage() {
                             <span className="text-muted-foreground mr-1">
                               Vence:
                             </span>
-                            {format(new Date(m.fecha_fin), "dd/MM/yyyy")}
+                            {formatLocalDate(m.fecha_fin)}
                           </div>
                         )}
                         {m.tipo === "creditos" && (

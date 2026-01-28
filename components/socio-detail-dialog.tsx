@@ -26,6 +26,7 @@ import {
   Activity,
   Pencil,
 } from "lucide-react";
+import { formatLocalDate } from "@/lib/utils";
 import type { Socio } from "@/lib/types";
 
 interface SocioDetailDialogProps {
@@ -114,10 +115,7 @@ export function SocioDetailDialog({
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="text-foreground">
-                    Nacimiento:{" "}
-                    {new Date(socio.fechaNacimiento).toLocaleDateString(
-                      "es-ES"
-                    )}
+                    Nacimiento: {formatLocalDate(socio.fechaNacimiento)}
                   </span>
                 </div>
               )}
@@ -153,7 +151,7 @@ export function SocioDetailDialog({
                       Fecha de inicio:
                     </span>
                     <span className="text-foreground">
-                      {new Date(socio.fechaInicio).toLocaleDateString("es-ES")}
+                      {formatLocalDate(socio.fechaInicio)}
                     </span>
                   </div>
                 )}
@@ -161,9 +159,7 @@ export function SocioDetailDialog({
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Vencimiento:</span>
                     <span className="font-medium text-foreground">
-                      {new Date(socio.fechaVencimiento).toLocaleDateString(
-                        "es-ES"
-                      )}
+                      {formatLocalDate(socio.fechaVencimiento)}
                     </span>
                   </div>
                 )}

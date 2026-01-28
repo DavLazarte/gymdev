@@ -52,6 +52,7 @@ export function ClassCard({
   const [isBooking, setIsBooking] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showAlumnos, setShowAlumnos] = useState(false);
+  const [selectedAttendances, setSelectedAttendances] = useState<string[]>([]);
   const isProcessingRef = useRef(false); // Guard para evitar doble tap real
   const { toast } = useToast();
 
@@ -115,18 +116,37 @@ export function ClassCard({
   };
 
   const handleMarkAttendance = async () => {
-    if (!selectedAlumno || isMarkingAttendance) return;
+    if (selectedAttendances.length === 0 || isMarkingAttendance) return;
     setIsMarkingAttendance(true);
+
+    let successCount = 0;
     try {
-      await api.marcarAsistencia({
-        id_persona: selectedAlumno.id_persona,
-        id_reserva: selectedAlumno.id,
-      });
-      toast({
-        title: "Asistencia registrada",
-        description: `${selectedAlumno.nombre} ha sido marcado como presente.`,
-      });
-      onBooked?.();
+      // Registrar todas las asistencias seleccionadas
+      for (const alumnoId of selectedAttendances) {
+        const alumno = classSession.alumnos.find(
+          (a) => a.id_persona.toString() === alumnoId,
+        );
+        if (!alumno) continue;
+
+        try {
+          await api.marcarAsistencia({
+            id_persona: alumno.id_persona,
+            id_reserva: alumno.id,
+          });
+          successCount++;
+        } catch (e) {
+          console.error(`Error marcando asistencia para ${alumno.nombre}:`, e);
+        }
+      }
+
+      if (successCount > 0) {
+        toast({
+          title: "Asistencia registrada",
+          description: `${successCount} alumno(s) marcados como presente.`,
+        });
+        setSelectedAttendances([]);
+        onBooked?.();
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -136,8 +156,15 @@ export function ClassCard({
     } finally {
       setIsMarkingAttendance(false);
       setShowAttendanceDialog(false);
-      setSelectedAlumno(null);
     }
+  };
+
+  const toggleAlumnoSelection = (alumnoId: string) => {
+    setSelectedAttendances((prev) =>
+      prev.includes(alumnoId)
+        ? prev.filter((id) => id !== alumnoId)
+        : [...prev, alumnoId],
+    );
   };
 
   return (
@@ -241,13 +268,27 @@ export function ClassCard({
                           currentUserType === "instructor" &&
                           alumno.estado_asistencia !== "asistio"
                         ) {
-                          setSelectedAlumno(alumno);
-                          setShowAttendanceDialog(true);
+                          toggleAlumnoSelection(alumno.id_persona.toString());
                         }
                       }}
                     >
                       <div className="relative">
-                        <Avatar className="h-8 w-8 border-2 border-background ring-1 ring-border">
+                        <div
+                          className={cn(
+                            "absolute inset-0 rounded-full bg-primary/20 scale-125 transition-opacity opacity-0",
+                            selectedAttendances.includes(
+                              alumno.id_persona.toString(),
+                            ) && "opacity-100",
+                          )}
+                        />
+                        <Avatar
+                          className={cn(
+                            "h-8 w-8 border-2 border-background ring-1 ring-border transition-all",
+                            selectedAttendances.includes(
+                              alumno.id_persona.toString(),
+                            ) && "ring-primary ring-offset-2",
+                          )}
+                        >
                           <AvatarImage
                             src={alumno.foto}
                             alt={alumno.nombre}
@@ -282,6 +323,24 @@ export function ClassCard({
                     </div>
                   ))}
                 </div>
+                {currentUserType === "instructor" &&
+                  selectedAttendances.length > 0 && (
+                    <div className="mt-3 pt-2 border-t border-border flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={() => setShowAttendanceDialog(true)}
+                        disabled={isMarkingAttendance}
+                        className="bg-green-600 hover:bg-green-700 text-white gap-2"
+                      >
+                        {isMarkingAttendance ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Check className="h-3 w-3" />
+                        )}
+                        Registrar Asistencia ({selectedAttendances.length})
+                      </Button>
+                    </div>
+                  )}
               </div>
             )}
 
@@ -388,8 +447,10 @@ export function ClassCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Marcar Asistencia</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Deseas marcar a <strong>{selectedAlumno?.nombre}</strong> como
-              presente en la clase de <strong>{classSession.nombre}</strong>?
+              ¿Deseas marcar como presentes a los{" "}
+              <strong>{selectedAttendances.length}</strong> alumnos
+              seleccionados en la clase de{" "}
+              <strong>{classSession.nombre}</strong>?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
