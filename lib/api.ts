@@ -191,14 +191,19 @@ class ApiClient {
     estado?: string;
     page?: number;
     per_page?: number;
-    tipo_persona?: string; // Agregado tipo_persona por si acaso
+    tipo_persona?: string;
+    all?: boolean; // Fetch all records without pagination
   }) {
     const urlParams = new URLSearchParams();
     if (params?.search) urlParams.append("search", params.search);
     if (params?.estado && params.estado !== "todos")
       urlParams.append("estado", params.estado);
     if (params?.page) urlParams.append("page", String(params.page));
-    if (params?.per_page) urlParams.append("per_page", String(params.per_page));
+    
+    // If 'all' is true, set a very high per_page to get all records
+    const perPage = params?.all ? 999 : (params?.per_page || 15);
+    urlParams.append("per_page", String(perPage));
+    
     if (params?.tipo_persona) urlParams.append("tipo_persona", params.tipo_persona);
 
     const queryString = urlParams.toString();

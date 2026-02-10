@@ -11,6 +11,7 @@ import { useRequireRole } from "@/hooks/useRequireRole";
 import { api } from "@/lib/api";
 import { Reserva } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { formatLocalDate } from "@/lib/utils";
 import {
   Calendar,
   CreditCard,
@@ -213,13 +214,7 @@ export default function ClientDashboardPage() {
                 </p>
                 <p className="text-sm font-semibold text-foreground">
                   {profile.membresia?.vencimiento
-                    ? new Date(
-                        profile.membresia.vencimiento,
-                      ).toLocaleDateString("es-ES", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      })
+                    ? formatLocalDate(profile.membresia.vencimiento)
                     : "Sin vencimiento"}
                 </p>
               </div>

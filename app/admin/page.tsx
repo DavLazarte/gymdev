@@ -101,17 +101,42 @@ export default function AdminDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Miembros Activos
+                Estado de Membresías
               </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {stats.metrics.sociosActivos}
+              <div className="space-y-2">
+                <Link
+                  href="/admin/membresias?estado=activa"
+                  className="flex justify-between text-sm hover:bg-muted/50 p-1 rounded transition-colors -mx-1 px-2 cursor-pointer"
+                >
+                  <span className="text-muted-foreground">Activas</span>
+                  <span className="font-semibold text-primary">
+                    {stats.membershipOverview.activas}
+                  </span>
+                </Link>
+                <Link
+                  href="/admin/membresias?estado=por_vencer"
+                  className="flex justify-between text-sm hover:bg-muted/50 p-1 rounded transition-colors -mx-1 px-2 cursor-pointer"
+                >
+                  <span className="text-muted-foreground">
+                    Por vencer (7 días)
+                  </span>
+                  <span className="font-semibold text-yellow-600 dark:text-yellow-500">
+                    {stats.membershipOverview.por_vencer}
+                  </span>
+                </Link>
+                <Link
+                  href="/admin/membresias?estado=vencida"
+                  className="flex justify-between text-sm hover:bg-muted/50 p-1 rounded transition-colors -mx-1 px-2 cursor-pointer"
+                >
+                  <span className="text-muted-foreground">Vencidas</span>
+                  <span className="font-semibold text-destructive">
+                    {stats.membershipOverview.vencidas}
+                  </span>
+                </Link>
               </div>
-              <p className="text-xs text-muted-foreground">
-                <span className="text-primary">Tiempo real</span>
-              </p>
             </CardContent>
           </Card>
 
@@ -288,39 +313,18 @@ export default function AdminDashboardPage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Membresías</CardTitle>
-              <CardDescription>Estado de los socios</CardDescription>
+              <CardTitle className="text-base">Socios con Membresía</CardTitle>
+              <CardDescription>Total de miembros habilitados</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <Link
-                href="/admin/membresias?estado=activa"
-                className="flex justify-between text-sm hover:bg-muted/50 p-1 rounded transition-colors -mx-1 px-2 cursor-pointer"
-              >
-                <span className="text-muted-foreground">Activas</span>
-                <span className="font-semibold text-primary">
-                  {stats.membershipOverview.activas}
-                </span>
-              </Link>
-              <Link
-                href="/admin/membresias?estado=por_vencer"
-                className="flex justify-between text-sm hover:bg-muted/50 p-1 rounded transition-colors -mx-1 px-2 cursor-pointer"
-              >
-                <span className="text-muted-foreground">
-                  Por vencer (7 días)
-                </span>
-                <span className="font-semibold text-yellow-600 dark:text-yellow-500">
-                  {stats.membershipOverview.por_vencer}
-                </span>
-              </Link>
-              <Link
-                href="/admin/membresias?estado=vencida"
-                className="flex justify-between text-sm hover:bg-muted/50 p-1 rounded transition-colors -mx-1 px-2 cursor-pointer"
-              >
-                <span className="text-muted-foreground">Vencidas</span>
-                <span className="font-semibold text-destructive">
-                  {stats.membershipOverview.vencidas}
-                </span>
-              </Link>
+            <CardContent>
+              <div className="text-center">
+                <div className="text-4xl font-bold text-primary">
+                  {stats.metrics.sociosActivos}
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Con acceso al gimnasio
+                </p>
+              </div>
             </CardContent>
           </Card>
 

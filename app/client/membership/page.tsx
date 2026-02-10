@@ -21,6 +21,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { formatLocalDate } from "@/lib/utils";
 
 export default function MembershipPage() {
   const [user, setUser] = useState<any>(null);
@@ -133,14 +134,7 @@ export default function MembershipPage() {
                         Fecha de vencimiento
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(membership.vencimiento).toLocaleDateString(
-                          "es-ES",
-                          {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          }
-                        )}
+                        {formatLocalDate(membership.vencimiento)}
                       </p>
                     </div>
                   </div>

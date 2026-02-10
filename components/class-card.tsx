@@ -29,8 +29,10 @@ import {
   ChevronDown,
   Flame,
   Check,
+  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AddStudentDialog } from "@/components/add-student-dialog";
 
 interface ClassCardProps {
   classSession: ClassSlot;
@@ -53,6 +55,7 @@ export function ClassCard({
   const [isDeleting, setIsDeleting] = useState(false);
   const [showAlumnos, setShowAlumnos] = useState(false);
   const [selectedAttendances, setSelectedAttendances] = useState<string[]>([]);
+  const [showAddStudentDialog, setShowAddStudentDialog] = useState(false);
   const isProcessingRef = useRef(false); // Guard para evitar doble tap real
   const { toast } = useToast();
 
@@ -351,6 +354,7 @@ export function ClassCard({
                   {classSession.hora}
                 </span>
               </div>
+
               {showBookButton && (
                 <div className="flex gap-2">
                   {isBooked && (
@@ -404,6 +408,19 @@ export function ClassCard({
                 </div>
               )}
             </div>
+
+            {/* Botón para instructores */}
+            {currentUserType === "instructor" && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowAddStudentDialog(true)}
+                className="w-full mt-2"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Agregar Alumno
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -474,6 +491,18 @@ export function ClassCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AddStudentDialog
+        open={showAddStudentDialog}
+        onOpenChange={setShowAddStudentDialog}
+        classId={classSession.clase_id}
+        classDate={classSession.fecha}
+        className={classSession.nombre}
+        onStudentAdded={() => {
+          setShowAddStudentDialog(false);
+          onBooked?.();
+        }}
+      />
     </>
   );
 }

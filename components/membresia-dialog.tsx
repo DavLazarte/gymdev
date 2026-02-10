@@ -67,7 +67,7 @@ export function MembresiaDialog({
   const filteredSocios = socios.filter(
     (s) =>
       s.nombre.toLowerCase().includes(socioSearch.toLowerCase()) ||
-      s.id.toLowerCase().includes(socioSearch.toLowerCase())
+      s.id.toLowerCase().includes(socioSearch.toLowerCase()),
   );
 
   useEffect(() => {
@@ -117,7 +117,7 @@ export function MembresiaDialog({
     setIsFetchingData(true);
     try {
       const [sociosRaw, planesRaw] = await Promise.all([
-        api.getSocios(),
+        api.getSocios({ all: true }), // Fetch all socios without pagination
         api.getPlanes(),
       ]);
 
@@ -163,7 +163,7 @@ export function MembresiaDialog({
     if (selectedPlan.duracion_dias) {
       const fin = addDays(
         new Date(formData.fecha_inicio),
-        selectedPlan.duracion_dias
+        selectedPlan.duracion_dias,
       );
       resume += `Vencerá el ${format(fin, "PPPP", {
         locale: es,
