@@ -150,11 +150,16 @@ export default function MembresiasPage() {
       setIsDialogOpen(false);
       setEditingMembresia(null);
     } catch (error: any) {
+      const isNetworkError =
+        error.message?.toLowerCase().includes("failed to fetch") ||
+        error.message?.toLowerCase().includes("network error");
+
       toast({
         variant: "destructive",
-        title: "Error",
-        description:
-          error.message || "Ocurrió un error al procesar la solicitud",
+        title: isNetworkError ? "Error de conexión" : "Error",
+        description: isNetworkError
+          ? "Problemas con la red  se aborto la carga para evitar una carga duplicada, intente de nuevo"
+          : error.message || "Ocurrió un error al procesar la solicitud",
       });
     }
   };

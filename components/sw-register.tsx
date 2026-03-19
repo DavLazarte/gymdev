@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const APP_VERSION = "1.19.1"; // Incrementar para forzar limpieza total
+const APP_VERSION = "1.20.0"; // Incrementar para forzar limpieza total
 
 export function ServiceWorkerRegister() {
   useEffect(() => {

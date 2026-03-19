@@ -85,6 +85,20 @@ export function ClassCard({
       });
       onBooked?.();
     } catch (error: any) {
+      // Manejo especial para "falsos positivos" por reintentos o lentitud de red
+      const isDuplicate = error.status === 400 && error.message?.toLowerCase().includes("ya tienes");
+      const isProcessing = error.status === 429;
+
+      if (isDuplicate || isProcessing) {
+        toast({
+          title: "Verificando tu reserva...",
+          description: "Parece que tu reserva ya se procesó correctamente. Por favor, recargá la página para confirmarla en tu lista.",
+        });
+        // Si es duplicado, forzamos actualización local
+        if (isDuplicate) onBooked?.();
+        return;
+      }
+
       toast({
         variant: "destructive",
         title: "Error al reservar",
@@ -311,14 +325,14 @@ export function ClassCard({
                             <Check className="h-2 w-2 text-white" />
                           </div>
                         )}
-                        {alumno.racha_actual && alumno.racha_actual > 0 && (
+                        {/* {alumno.racha_actual && alumno.racha_actual > 0 && (
                           <div className="absolute -bottom-1 -right-1 bg-orange-100 dark:bg-orange-950 rounded-full px-1 border border-orange-200 dark:border-orange-800 flex items-center gap-0.5">
                             <Flame className="h-2 w-2 text-orange-500 fill-orange-500" />
                             <span className="text-[7px] font-bold text-orange-600 dark:text-orange-400">
                               {alumno.racha_actual}
                             </span>
                           </div>
-                        )}
+                        )} */}
                       </div>
                       <span className="text-[10px] text-muted-foreground max-w-[60px] truncate text-center leading-tight">
                         {alumno.nombre.split(" ")[0]}

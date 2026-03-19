@@ -147,7 +147,7 @@ export function MembresiaDialog({
     setIsLoading(true);
     try {
       await onSave(formData);
-      onOpenChange(false);
+      // onOpenChange(false); // ← ELIMINADO: El padre (page.tsx) ya lo cierra en handleSave
     } catch (error) {
       console.error("Error saving membership:", error);
     } finally {

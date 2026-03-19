@@ -126,14 +126,23 @@ class ApiClient {
           if (typeof window !== "undefined") {
               localStorage.setItem("force_proxy_mode", "true");
           }
-          // Reintentar inmediatamente con proxy
-          return this.request<T>(endpoint, options, retryCount);
+          // Reintentar inmediatamente con proxy SOLO para GETs
+          const method = (options.method || "GET").toUpperCase();
+          if (method === "GET") {
+              console.log("[ApiClient] Reintentando GET vía Proxy...");
+              return this.request<T>(endpoint, options, retryCount);
+          }
+          // Para POST/PUT/DELETE no reintentamos automáticamente aunque hayamos cambiado a modo proxy
+          throw error;
       }
 
-      // Caso 2: Backoff exponencial para errores transitorios
-      if (retryCount < this.MAX_RETRIES) {
-          const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s...
-          console.log(`[ApiClient] Reintentando petición (${retryCount + 1}/${this.MAX_RETRIES}) en ${delay}ms...`);
+      // Caso 2: Backoff exponencial SOLO para GETs — nunca reintentar POST/PUT/DELETE
+      // porque si la request llegó al server pero la respuesta se perdió en tránsito,
+      // un retry crearía registros duplicados en la BD.
+      const method = (options.method || "GET").toUpperCase();
+      if (method === "GET" && retryCount < this.MAX_RETRIES) {
+          const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s...
+          console.log(`[ApiClient] Reintentando GET (${retryCount + 1}/${this.MAX_RETRIES}) en ${delay}ms...`);
           await this.sleep(delay);
           return this.request<T>(endpoint, options, retryCount + 1);
       }

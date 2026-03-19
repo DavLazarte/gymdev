@@ -13,6 +13,16 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       text: "text-primary",
       icon: CheckCircle2,
     },
+    Renovada: {
+      bg: "bg-blue-500/10",
+      text: "text-blue-700 dark:text-blue-400",
+      icon: Clock,
+    },
+    renovada: {
+      bg: "bg-blue-500/10",
+      text: "text-blue-700 dark:text-blue-400",
+      icon: Clock,
+    },
     "Por Vencer": {
       bg: "bg-yellow-500/10",
       text: "text-yellow-700 dark:text-yellow-500",

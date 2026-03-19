@@ -125,7 +125,7 @@ export default function ClientDashboardPage() {
             </p>
           </div>
 
-          <div className="flex flex-col items-center justify-center bg-orange-100 dark:bg-orange-950/30 px-4 py-2 rounded-xl border border-orange-200 dark:border-orange-900">
+          {/* <div className="flex flex-col items-center justify-center bg-orange-100 dark:bg-orange-950/30 px-4 py-2 rounded-xl border border-orange-200 dark:border-orange-900">
             <div className="flex items-center gap-1">
               <Flame
                 className={cn(
@@ -140,7 +140,7 @@ export default function ClientDashboardPage() {
             <span className="text-[10px] font-bold text-orange-600/70 dark:text-orange-400 uppercase tracking-wider">
               Racha Días
             </span>
-          </div>
+          </div> */}
         </div>
 
         {/* Membership Status Card (Conditional) */}
