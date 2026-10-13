@@ -151,11 +151,11 @@ export default function PublicBoxLandingPage() {
     : null
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-primary selection:text-primary-foreground">
+    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-primary selection:text-primary-foreground overflow-x-hidden">
       {/* Header Público */}
       <header className="sticky top-0 z-40 border-b border-border/80 bg-background/80 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="h-10 w-10 rounded-xl overflow-hidden border border-border bg-muted flex items-center justify-center shrink-0">
               {tenant.logo_url ? (
                 <img src={tenant.logo_url} alt={tenant.nombre} className="h-full w-full object-cover" />
@@ -163,8 +163,8 @@ export default function PublicBoxLandingPage() {
                 <Building2 className="h-5 w-5 text-muted-foreground" />
               )}
             </div>
-            <div>
-              <span className="font-bold text-base md:text-lg tracking-tight block leading-tight">
+            <div className="min-w-0">
+              <span className="font-bold text-base md:text-lg tracking-tight block leading-tight truncate">
                 {tenant.nombre}
               </span>
               <span className="text-[11px] text-muted-foreground hidden sm:block">
@@ -173,7 +173,7 @@ export default function PublicBoxLandingPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {whatsappUrl && (
               <Button size="sm" variant="outline" asChild className="hidden sm:inline-flex">
                 <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
@@ -185,7 +185,7 @@ export default function PublicBoxLandingPage() {
             <Button size="sm" asChild>
               <Link href={`/login?box=${tenant.slug}`}>
                 <User className="mr-1.5 h-4 w-4" />
-                Soy Socio
+                <span>Soy Socio</span>
               </Link>
             </Button>
           </div>
@@ -193,54 +193,54 @@ export default function PublicBoxLandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-12 md:py-20 border-b border-border bg-gradient-to-b from-card to-background">
-        <div className="max-w-6xl mx-auto px-4 grid gap-10 lg:grid-cols-12 items-center">
-          <div className="lg:col-span-7 space-y-6">
+      <section className="relative overflow-hidden py-8 sm:py-14 md:py-20 border-b border-border bg-gradient-to-b from-card to-background">
+        <div className="max-w-6xl mx-auto px-4 grid gap-8 lg:gap-12 lg:grid-cols-12 items-center">
+          <div className="lg:col-span-7 space-y-5 sm:space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border border-primary/30 bg-primary/10 text-primary">
-              <Sparkles className="h-3.5 w-3.5" />
-              Preventa y Clases Abiertas
+              <Sparkles className="h-3.5 w-3.5 shrink-0" />
+              <span>Preventa y Clases Abiertas</span>
             </div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1]">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15] break-words">
               Entrená al máximo en <span className="text-primary">{tenant.nombre}</span>
             </h1>
 
-            <p className="text-base md:text-lg text-muted-foreground max-w-xl">
+            <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-xl leading-relaxed">
               {tenant.descripcion ||
                 "Unite a nuestra comunidad, alcanzá tus metas y llevá tu rendimiento al siguiente nivel con planes personalizados y los mejores entrenadores."}
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 pt-2">
-              <Button size="lg" asChild className="shadow-lg shadow-primary/20">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1 sm:pt-2 w-full sm:w-auto">
+              <Button size="lg" asChild className="shadow-lg shadow-primary/20 w-full sm:w-auto text-center justify-center">
                 <a href="#inscribirme">
                   Anotarme / Clase de Prueba
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ml-2 h-4 w-4 inline" />
                 </a>
               </Button>
               {whatsappUrl && (
-                <Button size="lg" variant="outline" asChild>
+                <Button size="lg" variant="outline" asChild className="w-full sm:w-auto text-center justify-center">
                   <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="mr-2 h-4 w-4 text-emerald-500" />
+                    <MessageCircle className="mr-2 h-4 w-4 text-emerald-500 inline" />
                     Consultar por WhatsApp
                   </a>
                 </Button>
               )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 border-t border-border/60 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 pt-4 border-t border-border/60 text-xs text-muted-foreground">
               {tenant.direccion && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <MapPin className="h-4 w-4 text-primary shrink-0" />
-                  <span className="truncate">{tenant.direccion}</span>
+                  <span className="truncate max-w-[220px]">{tenant.direccion}</span>
                 </div>
               )}
               {tenant.telefono && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <Phone className="h-4 w-4 text-primary shrink-0" />
                   <span>{tenant.telefono}</span>
                 </div>
               )}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
                 <span>Cupos Limitados</span>
               </div>
@@ -248,18 +248,18 @@ export default function PublicBoxLandingPage() {
           </div>
 
           {/* Formulario de Captación / Lead */}
-          <div id="inscribirme" className="lg:col-span-5 scroll-mt-24">
-            <Card className="border-primary/40 shadow-2xl bg-card">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <Dumbbell className="h-5 w-5 text-primary" />
-                  ¡Sumate a entrenar!
+          <div id="inscribirme" className="lg:col-span-5 scroll-mt-20 w-full">
+            <Card className="border-primary/40 shadow-2xl bg-card overflow-hidden">
+              <CardHeader className="pb-3 p-5 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                  <Dumbbell className="h-5 w-5 text-primary shrink-0" />
+                  <span>¡Sumate a entrenar!</span>
                 </CardTitle>
                 <CardDescription className="text-xs">
                   Dejanos tus datos para asegurar tu cupo o coordinar tu primera clase.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-5 sm:p-6 pt-0 sm:pt-0">
                 {submitted ? (
                   <div className="py-8 text-center space-y-4">
                     <div className="h-14 w-14 rounded-full bg-primary/15 text-primary flex items-center justify-center mx-auto border border-primary/30">
@@ -276,8 +276,8 @@ export default function PublicBoxLandingPage() {
                     </Button>
                   </div>
                 ) : (
-                  <form onSubmit={handleSubmit} className="space-y-3.5">
-                    <div className="grid grid-cols-2 gap-3">
+                  <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label htmlFor="nombre" className="text-xs">Nombre *</Label>
                         <Input
@@ -344,20 +344,20 @@ export default function PublicBoxLandingPage() {
                       <Textarea
                         id="mensaje"
                         rows={2}
-                        placeholder="Ej: Puedo entrenar por la mañana / tarde, quiero saber horarios..."
+                        placeholder="Ej: Puedo entrenar por la mañana / tarde..."
                         value={formData.mensaje}
                         onChange={(e) => setFormData({ ...formData, mensaje: e.target.value })}
                       />
                     </div>
 
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    <Button type="submit" className="w-full py-5 text-sm font-semibold" disabled={isSubmitting}>
                       {isSubmitting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Enviando solicitud...
                         </>
                       ) : (
-                        "Solicitar Asesoramiento / Clase de Prueba"
+                        "Enviar Solicitud"
                       )}
                     </Button>
                   </form>
@@ -370,49 +370,45 @@ export default function PublicBoxLandingPage() {
 
       {/* Planes y Modalidades (Sin precios, orientados a asesoramiento) */}
       {planes.length > 0 && (
-        <section className="py-12 md:py-16 border-b border-border max-w-6xl mx-auto px-4 w-full">
-          <div className="text-center max-w-xl mx-auto space-y-2 mb-10">
+        <section className="py-8 sm:py-12 md:py-16 border-b border-border max-w-6xl mx-auto px-4 w-full">
+          <div className="text-center max-w-xl mx-auto space-y-2 mb-8 sm:mb-10">
             <Badge variant="outline" className="border-primary/40 text-primary">
               Membresías
             </Badge>
-            <h2 className="text-2xl md:text-3xl font-bold">Nuestros Planes</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold">Nuestros Planes</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Contamos con diferentes modalidades según tu frecuencia de entrenamiento y objetivos.
             </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {planes.map((plan) => (
-              <Card key={plan.id} className="relative flex flex-col justify-between border-border hover:border-primary/60 transition-all">
-                <CardHeader>
-                  <CardTitle className="text-lg">{plan.nombre}</CardTitle>
-                  <CardDescription className="text-xs">
-                    {plan.modalidad === "creditos" ? `${plan.creditos ?? 10} Clases / Créditos` : "Pase Mensual"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {plan.descripcion ? (
-                    <p className="text-xs text-muted-foreground">{plan.descripcion}</p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Acceso guiado por entrenadores y seguimiento personalizado.
-                    </p>
-                  )}
-                  <Button
-                    variant="outline"
-                    className="w-full text-xs"
-                    onClick={() => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        mensaje: `Quiero consultar por el plan "${plan.nombre}".`,
-                      }))
-                      const el = document.getElementById("inscribirme")
-                      el?.scrollIntoView({ behavior: "smooth" })
-                    }}
-                  >
-                    Consultar por este plan ↗
-                  </Button>
-                </CardContent>
+              <Card key={plan.id} className="relative flex flex-col justify-between border-border hover:border-primary/60 transition-all p-5 sm:p-6">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h3 className="font-bold text-base sm:text-lg text-foreground">{plan.nombre}</h3>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {plan.modalidad === "creditos" ? `${plan.creditos ?? 10} Clases` : "Mensual"}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+                    {plan.descripcion || "Acceso guiado por entrenadores y seguimiento personalizado."}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full text-xs"
+                  onClick={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      mensaje: `Quiero consultar por el plan "${plan.nombre}".`,
+                    }))
+                    const el = document.getElementById("inscribirme")
+                    el?.scrollIntoView({ behavior: "smooth" })
+                  }}
+                >
+                  Consultar por este plan ↗
+                </Button>
               </Card>
             ))}
           </div>
@@ -421,32 +417,32 @@ export default function PublicBoxLandingPage() {
 
       {/* Disciplinas y Horarios */}
       {clases.length > 0 && (
-        <section className="py-12 md:py-16 border-b border-border max-w-6xl mx-auto px-4 w-full">
-          <div className="text-center max-w-xl mx-auto space-y-2 mb-10">
+        <section className="py-8 sm:py-12 md:py-16 border-b border-border max-w-6xl mx-auto px-4 w-full">
+          <div className="text-center max-w-xl mx-auto space-y-2 mb-8 sm:mb-10">
             <Badge variant="outline" className="border-primary/40 text-primary">
               Actividades
             </Badge>
-            <h2 className="text-2xl md:text-3xl font-bold">Nuestras Clases</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold">Nuestras Clases</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Variedad de turnos y disciplinas dictadas por coaches certificados.
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {clases.map((clase) => (
               <div key={clase.id} className="rounded-xl border border-border bg-card p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm text-foreground">{clase.nombre}</h3>
-                  <Badge variant="secondary" className="text-[10px] capitalize">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-semibold text-sm text-foreground truncate">{clase.nombre}</h3>
+                  <Badge variant="secondary" className="text-[10px] capitalize shrink-0">
                     {clase.modalidad || "Grupo"}
                   </Badge>
                 </div>
                 {clase.descripcion && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">{clase.descripcion}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{clase.descripcion}</p>
                 )}
                 {clase.hora_inicio && (
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
-                    <Clock className="h-3.5 w-3.5 text-primary" />
+                    <Clock className="h-3.5 w-3.5 text-primary shrink-0" />
                     <span>{clase.hora_inicio.slice(0, 5)} - {clase.hora_fin?.slice(0, 5) || "Fin"}</span>
                   </div>
                 )}
@@ -456,10 +452,23 @@ export default function PublicBoxLandingPage() {
         </section>
       )}
 
+      {/* Botón flotante WhatsApp en Mobile */}
+      {whatsappUrl && (
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Contactar por WhatsApp"
+          className="fixed bottom-5 right-5 z-50 sm:hidden flex items-center justify-center h-14 w-14 rounded-full bg-emerald-500 text-white shadow-2xl shadow-emerald-500/40 hover:scale-105 active:scale-95 transition-all"
+        >
+          <MessageCircle className="h-7 w-7" />
+        </a>
+      )}
+
       {/* Footer */}
       <footer className="mt-auto border-t border-border py-8 bg-card/60">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
+        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground text-center sm:text-left">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
             <span className="font-semibold text-foreground">{tenant.nombre}</span>
             <span>·</span>
             <span>
