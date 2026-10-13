@@ -4,19 +4,19 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { ClassSlot, Reserva, Socio } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  Calendar as CalendarIcon,
   Search,
   UserPlus,
   CheckCircle2,
-  XCircle,
   Clock,
   Loader2,
   Filter,
   Trash2,
   RefreshCcw,
+  RotateCcw,
 } from "lucide-react";
 import {
   Dialog,
@@ -25,16 +25,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 export default function AdminReservationsPage() {
   const [selectedDate, setSelectedDate] = useState(
@@ -47,12 +41,29 @@ export default function AdminReservationsPage() {
   const [searchSocio, setSearchSocio] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingSocio, setIsAddingSocio] = useState(false);
+  const [isCoach, setIsCoach] = useState(false);
   const { toast } = useToast();
 
   const parseDateToLocal = (dateStr: string) => {
     const [year, month, day] = dateStr.split("-").map(Number);
     return new Date(year, month - 1, day);
   };
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("auth_user");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (
+          parsed?.role_name === "gym_staff" ||
+          parsed?.role === "coach" ||
+          parsed?.rol === "coach"
+        ) {
+          setIsCoach(true);
+        }
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -62,17 +73,18 @@ export default function AdminReservationsPage() {
     try {
       setIsLoading(true);
       const slots = await api.getAvailableClasses(selectedDate, selectedDate);
-      setClasses(slots);
+      setClasses(slots || []);
 
-      // Si hay una clase seleccionada, recargar sus reservas
-      if (selectedClass) {
-        const updatedSelected = slots.find(
-          (s) => s.clase_id === selectedClass.clase_id
-        );
-        if (updatedSelected) {
-          setSelectedClass(updatedSelected);
-          loadReservas(updatedSelected.clase_id);
-        }
+      if (slots && slots.length > 0) {
+        const targetSlot =
+          (selectedClass &&
+            slots.find((s) => s.clase_id === selectedClass.clase_id)) ||
+          slots[0];
+        setSelectedClass(targetSlot);
+        await loadReservas(targetSlot.clase_id);
+      } else {
+        setSelectedClass(null);
+        setReservas([]);
       }
     } catch (error) {
       console.error("Error loading slots:", error);
@@ -105,8 +117,7 @@ export default function AdminReservationsPage() {
   const loadReservas = async (claseId: string) => {
     try {
       const data = await api.getReservas({ fecha: selectedDate });
-      // Filtrar las del gimnasio para esta clase específica
-      const filtered = data.filter(
+      const filtered = (data || []).filter(
         (r: any) => String(r.id_clase_gym) === String(claseId)
       );
       setReservas(filtered);
@@ -127,14 +138,16 @@ export default function AdminReservationsPage() {
     try {
       await api.createReserva({
         id_clase_gym: selectedClass.clase_id,
+        turno_id: selectedClass.turno_id,
         fecha_reserva: selectedDate,
         id_persona: socio.id,
+        accion: "confirmar",
       });
       toast({
         title: "Socio anotado",
         description: `${socio.nombre} ha sido agregado a la clase.`,
       });
-      loadData(); // Recargar para actualizar cupos y lista
+      await loadData();
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -149,22 +162,23 @@ export default function AdminReservationsPage() {
   const handleToggleAttendance = async (reserva: Reserva) => {
     try {
       if (reserva.estado === "asistio") {
-        // En una app real podríamos permitir deshacer, por ahora solo marcar
         return;
       }
 
       await api.marcarAsistencia({
         id_persona: reserva.id_persona,
         id_clase_gym: reserva.id_clase_gym,
+        turno_id: reserva.turno_id,
         id_reserva: reserva.id,
+        fecha: selectedDate,
       });
 
       toast({
         title: "Asistencia registrada",
-        description: `Se marcó la asistencia de ${reserva.persona?.nombre}.`,
+        description: `Se marcó la asistencia de ${reserva.persona?.nombre || "el socio"}.`,
       });
 
-      loadReservas(reserva.id_clase_gym);
+      await loadData();
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -174,54 +188,80 @@ export default function AdminReservationsPage() {
     }
   };
 
+  const handleRestoreFixedSocio = async (reserva: Reserva) => {
+    try {
+      await api.createReserva({
+        id_clase_gym: reserva.id_clase_gym,
+        turno_id: reserva.turno_id,
+        fecha_reserva: selectedDate,
+        id_persona: reserva.id_persona,
+        accion: "confirmar",
+      });
+      toast({
+        title: "Socio reanotado",
+        description: `${reserva.persona?.nombre || "El socio"} volvió a quedar confirmado en la clase de hoy.`,
+      });
+      await loadData();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "No se pudo reanotar al socio.",
+      });
+    }
+  };
+
   const handleDeleteReserva = async (reserva: Reserva) => {
-    if (
-      !confirm(
-        `¿Estás seguro de que deseas cancelar la reserva de ${reserva.persona?.nombre}?`
-      )
-    ) {
+    const isFixed = !!reserva.es_turno_fijo;
+    const msg = isFixed
+      ? `¿Marcar que ${reserva.persona?.nombre || "el socio"} NO asiste hoy (liberar su cupo del día)?`
+      : `¿Estás seguro de que deseas cancelar la reserva de ${reserva.persona?.nombre || "el socio"}?`;
+
+    if (!confirm(msg)) {
       return;
     }
 
     try {
       await api.cancelReserva(reserva.id);
       toast({
-        title: "Reserva eliminada",
-        description: "La reserva ha sido cancelada correctamente.",
+        title: isFixed ? "Baja del día registrada" : "Reserva eliminada",
+        description: isFixed
+          ? "Se liberó el lugar del socio para la clase de esta fecha."
+          : "La reserva ha sido cancelada correctamente.",
       });
-      loadData();
-      if (selectedClass) {
-        loadReservas(selectedClass.clase_id);
-      }
+      await loadData();
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "No se pudo eliminar la reserva.",
+        description: error.message || "No se pudo procesar la baja.",
       });
     }
   };
 
-  // Trigger search when user types
   useEffect(() => {
     const timer = setTimeout(() => {
       searchSocios(searchSocio);
-    }, 300); // Debounce de 300ms
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [searchSocio]);
 
-  const filteredSocios = allSocios; // Ya vienen filtrados del backend
+  const filteredSocios = allSocios;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">
-            Gestión de Reservas y Asistencias
+            {isCoach
+              ? "Mis Clases — Turnos del Día y Presente"
+              : "Gestión de Reservas y Asistencias"}
           </h1>
           <p className="text-muted-foreground">
-            Administra quiénes asisten a cada clase hoy.
+            {isCoach
+              ? "Visualiza tus clases, suma alumnos en el día y marca el presente."
+              : "Administra quiénes asisten a cada clase hoy."}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -258,7 +298,7 @@ export default function AdminReservationsPage() {
               </div>
             ) : classes.length === 0 ? (
               <p className="text-center py-8 text-sm text-muted-foreground">
-                No hay clases programadas.
+                No hay clases programadas para esta fecha.
               </p>
             ) : (
               classes.map((slot) => (
@@ -298,7 +338,7 @@ export default function AdminReservationsPage() {
                   <CardTitle className="text-lg">
                     {selectedClass.nombre}
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground capitalize">
                     {format(
                       parseDateToLocal(selectedDate),
                       "EEEE d 'de' MMMM",
@@ -383,7 +423,7 @@ export default function AdminReservationsPage() {
                   {reservas.length === 0 ? (
                     <div className="text-center py-12 border rounded-lg border-dashed">
                       <p className="text-sm text-muted-foreground">
-                        No hay socios inscriptos aún.
+                        No hay socios inscriptos aún en esta clase.
                       </p>
                     </div>
                   ) : (
@@ -392,57 +432,137 @@ export default function AdminReservationsPage() {
                         <thead className="bg-muted/50">
                           <tr className="text-left border-b font-medium text-muted-foreground">
                             <th className="p-3">Socio</th>
-                            <th className="p-3">Membresía</th>
+                            <th className="p-3">Estado en la Clase</th>
                             <th className="p-3 text-center">Asistencia</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {reservas.map((reserva) => (
-                            <tr key={reserva.id}>
-                              <td className="p-3 font-medium">
-                                {reserva.persona?.nombre}
-                              </td>
-                              <td className="p-3">
-                                <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                                  Confirmada
-                                </span>
-                              </td>
-                              <td className="p-3 text-center">
-                                <div className="flex items-center justify-center gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant={
-                                      reserva.estado === "asistio"
-                                        ? "default"
-                                        : "outline"
-                                    }
-                                    className={
-                                      reserva.estado === "asistio"
-                                        ? "bg-green-600 hover:bg-green-700"
-                                        : ""
-                                    }
-                                    onClick={() =>
-                                      handleToggleAttendance(reserva)
-                                    }
-                                  >
-                                    {reserva.estado === "asistio" ? (
-                                      <CheckCircle2 className="h-4 w-4" />
-                                    ) : (
-                                      "Presente"
+                          {reservas.map((reserva: any) => {
+                            const isFixed = !!reserva.es_turno_fijo;
+                            const isNoAsiste =
+                              reserva.no_asiste ||
+                              reserva.estado === "baja_fijo";
+                            const isConfirmed =
+                              reserva.confirmado ||
+                              reserva.estado === "reservada" ||
+                              reserva.estado === "asistio";
+
+                            return (
+                              <tr
+                                key={reserva.id}
+                                className={cn(
+                                  isNoAsiste && "bg-muted/20 opacity-75"
+                                )}
+                              >
+                                <td className="p-3">
+                                  <div className="flex flex-col gap-0.5">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-foreground">
+                                        {reserva.persona?.nombre ||
+                                          `Socio #${reserva.id_persona}`}
+                                      </span>
+                                      {isFixed && (
+                                        <Badge
+                                          variant="secondary"
+                                          className="text-[10px] px-1.5 py-0"
+                                        >
+                                          Turno Fijo
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {!isCoach && reserva.persona?.plan_nombre && (
+                                      <span className="text-xs text-muted-foreground">
+                                        {reserva.persona.plan_nombre}
+                                      </span>
                                     )}
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-destructive border-destructive/20 hover:bg-destructive/10"
-                                    onClick={() => handleDeleteReserva(reserva)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
+                                  </div>
+                                </td>
+                                <td className="p-3">
+                                  {reserva.estado === "asistio" ? (
+                                    <span className="text-xs px-2 py-0.5 rounded bg-green-500/15 text-green-600 dark:text-green-400 border border-green-500/30 font-medium">
+                                      Asistió (Presente)
+                                    </span>
+                                  ) : isNoAsiste ? (
+                                    <span className="text-xs px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-medium">
+                                      Avisó que no va (Cupo liberado)
+                                    </span>
+                                  ) : isFixed ? (
+                                    isConfirmed ? (
+                                      <span className="text-xs px-2 py-0.5 rounded bg-green-500/15 text-green-600 dark:text-green-400 border border-green-500/30 font-medium">
+                                        Confirmó que va
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-medium">
+                                        Anotado (Sin confirmar)
+                                      </span>
+                                    )
+                                  ) : (
+                                    <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-medium">
+                                      Reserva Confirmada
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-center">
+                                  <div className="flex items-center justify-center gap-2">
+                                    {isNoAsiste ? (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1.5 text-xs"
+                                        onClick={() =>
+                                          handleRestoreFixedSocio(reserva)
+                                        }
+                                        title="Volver a anotar al socio en esta fecha"
+                                      >
+                                        <RotateCcw className="h-3.5 w-3.5" />
+                                        Reanotar hoy
+                                      </Button>
+                                    ) : (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          variant={
+                                            reserva.estado === "asistio"
+                                              ? "default"
+                                              : "outline"
+                                          }
+                                          className={
+                                            reserva.estado === "asistio"
+                                              ? "bg-green-600 hover:bg-green-700 text-white"
+                                              : ""
+                                          }
+                                          onClick={() =>
+                                            handleToggleAttendance(reserva)
+                                          }
+                                        >
+                                          {reserva.estado === "asistio" ? (
+                                            <CheckCircle2 className="h-4 w-4" />
+                                          ) : (
+                                            "Presente"
+                                          )}
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="text-destructive border-destructive/20 hover:bg-destructive/10"
+                                          onClick={() =>
+                                            handleDeleteReserva(reserva)
+                                          }
+                                          title={
+                                            isFixed
+                                              ? "Marcar que no asiste hoy"
+                                              : "Cancelar reserva"
+                                          }
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

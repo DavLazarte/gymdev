@@ -29,19 +29,22 @@ import {
   DollarSign,
   Settings,
   TrendingDown,
+  Dumbbell,
 } from "lucide-react";
 
 interface MobileNavProps {
   role: "client" | "reception" | "admin";
+  isCoach?: boolean;
 }
 
-export function MobileNav({ role }: MobileNavProps) {
+export function MobileNav({ role, isCoach = false }: MobileNavProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
   const clientNav = [
     { href: "/client", icon: Home, label: "Inicio" },
     { href: "/client/book", icon: Calendar, label: "Reservar" },
+    { href: "/client/entrenamiento", icon: Dumbbell, label: "Rutina" },
     { href: "/client/profile", icon: User, label: "Perfil" },
   ];
 
@@ -49,6 +52,11 @@ export function MobileNav({ role }: MobileNavProps) {
     { href: "/reception", icon: LayoutDashboard, label: "Panel" },
     { href: "/reception/search", icon: Search, label: "Buscar" },
     { href: "/reception/book", icon: Calendar, label: "Reservar" },
+  ];
+
+  const coachNav = [
+    { href: "/admin/reservas", icon: UserCheck, label: "Mis Clases y Presente" },
+    { href: "/admin/profile", icon: User, label: "Mi Perfil" },
   ];
 
   const adminNav = [
@@ -61,6 +69,7 @@ export function MobileNav({ role }: MobileNavProps) {
     { href: "/admin/membresias", icon: CreditCard, label: "Membresías" },
     { href: "/admin/planes", icon: Package, label: "Planes" },
     { href: "/admin/clases", icon: Calendar, label: "Clases" },
+    { href: "/admin/entrenamientos", icon: Dumbbell, label: "Entrenamientos" },
     { href: "/admin/reservas", icon: Calendar, label: "Reservas" },
     { href: "/admin/instructores", icon: UserCheck, label: "Instructores" },
     { href: "/admin/asistencias", icon: Activity, label: "Asistencias" },
@@ -74,6 +83,8 @@ export function MobileNav({ role }: MobileNavProps) {
       ? clientNav
       : role === "reception"
       ? receptionNav
+      : isCoach
+      ? coachNav
       : adminNav;
 
   return (
@@ -98,7 +109,7 @@ export function MobileNav({ role }: MobileNavProps) {
           );
         })}
 
-        {role === "admin" && (
+        {role === "admin" && !isCoach && (
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button

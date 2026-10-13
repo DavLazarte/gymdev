@@ -71,8 +71,12 @@ export default function InstructoresPage() {
         telefono: item.telefono,
         foto: item.foto,
         direccion: item.direccion,
-        especialidades: [],
-        biografia: "",
+        especialidades: Array.isArray(item.especialidades)
+          ? item.especialidades
+          : item.especialidades
+            ? String(item.especialidades).split(",").map((s: string) => s.trim())
+            : [],
+        biografia: item.biografia || item.observaciones || "",
         estado:
           item.estado && item.estado.toLowerCase() === "activo"
             ? ("activo" as const)

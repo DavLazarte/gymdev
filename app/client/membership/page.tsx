@@ -84,9 +84,19 @@ export default function MembershipPage() {
         {membership ? (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <CardTitle>{membership.plan}</CardTitle>
-                <StatusBadge status={membership.estado} />
+                <StatusBadge
+                  status={
+                    membership.estado === "activo" || membership.estado === "activa"
+                      ? "Activa"
+                      : membership.estado === "por_vencer"
+                      ? "Por Vencer"
+                      : membership.estado === "vencido" || membership.estado === "vencida"
+                      ? "Vencida"
+                      : "Cancelada"
+                  }
+                />
               </div>
               <CardDescription>
                 Información de tu membresía actual
@@ -103,26 +113,29 @@ export default function MembershipPage() {
                       Modalidad
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {/* TODO: Modality not explicitly in getProfile response, usually implied by plan name or type */}
-                      Plan Activo
+                      {membership.modalidad ||
+                        (membership.tipo === "creditos"
+                          ? "Por Créditos"
+                          : "Tiempo Libre")}
                     </p>
                   </div>
                 </div>
 
-                {/* Fecha Inicio (No siempre viene en el profile simplificado, pero vencimiento sí) */}
-                {/* 
-                <div className="flex items-start gap-3 rounded-lg border border-border p-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <Calendar className="h-5 w-5 text-primary" />
+                {membership.fecha_inicio && (
+                  <div className="flex items-start gap-3 rounded-lg border border-border p-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <Calendar className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-foreground">
+                        Fecha de inicio
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatLocalDate(membership.fecha_inicio)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">Fecha de inicio</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(membership.startDate).toLocaleDateString("es-ES", { ... })}
-                    </p>
-                  </div>
-                </div>
-                */}
+                )}
 
                 {membership.vencimiento && (
                   <div className="flex items-start gap-3 rounded-lg border border-border p-4">
@@ -142,12 +155,17 @@ export default function MembershipPage() {
 
                 {membership.creditos !== null &&
                   membership.creditos !== undefined && (
-                    <div className="rounded-lg bg-primary/5 p-4">
+                    <div className="rounded-lg bg-primary/5 p-4 border border-primary/20">
                       <p className="text-sm text-muted-foreground">
-                        Créditos restantes
+                        Créditos disponibles
                       </p>
                       <p className="text-2xl font-bold text-primary">
-                        {membership.creditos}
+                        {membership.creditos}{" "}
+                        <span className="text-sm font-normal text-muted-foreground">
+                          {membership.creditos_totales
+                            ? `de ${membership.creditos_totales} clases`
+                            : "clases"}
+                        </span>
                       </p>
                     </div>
                   )}

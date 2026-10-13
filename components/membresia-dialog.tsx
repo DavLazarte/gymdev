@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, CalendarIcon, Info, Search, CreditCard } from "lucide-react";
 import { api } from "@/lib/api";
-import type { Membresia, Socio, Plan } from "@/lib/types";
+import type { Membresia, Socio, Plan, Clase } from "@/lib/types";
 import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Separator } from "@/components/ui/separator";
@@ -46,10 +46,12 @@ export function MembresiaDialog({
   const [isFetchingData, setIsFetchingData] = useState(false);
   const [socios, setSocios] = useState<Socio[]>([]);
   const [planes, setPlanes] = useState<Plan[]>([]);
+  const [clases, setClases] = useState<Clase[]>([]);
 
   const [formData, setFormData] = useState({
     id_socio: "",
     id_plan: "",
+    id_clase_fija: "ninguna",
     fecha_inicio: format(new Date(), "yyyy-MM-dd"),
     // Campos de pago
     registrar_pago: false,
@@ -81,6 +83,7 @@ export function MembresiaDialog({
       setFormData({
         id_socio: membresia.idpersona ? String(membresia.idpersona) : "",
         id_plan: membresia.idservicio ? String(membresia.idservicio) : "",
+        id_clase_fija: "ninguna",
         fecha_inicio: membresia.fecha_inicio
           ? format(new Date(membresia.fecha_inicio), "yyyy-MM-dd")
           : format(new Date(), "yyyy-MM-dd"),
@@ -93,6 +96,7 @@ export function MembresiaDialog({
       setFormData({
         id_socio: initialSocioId || "",
         id_plan: "",
+        id_clase_fija: "ninguna",
         fecha_inicio: format(new Date(), "yyyy-MM-dd"),
         registrar_pago: false,
         metodo_pago: "efectivo",
@@ -116,9 +120,10 @@ export function MembresiaDialog({
   const fetchData = async () => {
     setIsFetchingData(true);
     try {
-      const [sociosRaw, planesRaw] = await Promise.all([
+      const [sociosRaw, planesRaw, clasesRaw] = await Promise.all([
         api.getSocios({ all: true }), // Fetch all socios without pagination
         api.getPlanes(),
+        api.getClases(),
       ]);
 
       // Adaptar socios: mapear idpersona -> id (SocioController ya lo manda como id)
@@ -135,6 +140,9 @@ export function MembresiaDialog({
 
       setSocios(adaptedSocios);
       setPlanes(adaptedPlanes);
+      setClases(
+        (clasesRaw?.clases || []).filter((c: Clase) => c.estado === "activa")
+      );
     } catch (error) {
       console.error("Error fetching data for MembresiaDialog:", error);
     } finally {
@@ -146,8 +154,14 @@ export function MembresiaDialog({
     e.preventDefault();
     setIsLoading(true);
     try {
-      await onSave(formData);
-      // onOpenChange(false); // ← ELIMINADO: El padre (page.tsx) ya lo cierra en handleSave
+      const payload = {
+        ...formData,
+        id_clase_fija:
+          formData.id_clase_fija && formData.id_clase_fija !== "ninguna"
+            ? formData.id_clase_fija
+            : undefined,
+      };
+      await onSave(payload);
     } catch (error) {
       console.error("Error saving membership:", error);
     } finally {
@@ -262,6 +276,48 @@ export function MembresiaDialog({
                 </SelectContent>
               </Select>
             </div>
+
+            {!membresia && clases.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="id_clase_fija">
+                  Turno Fijo / Clase asignada (Opcional)
+                </Label>
+                <Select
+                  value={formData.id_clase_fija}
+                  onValueChange={(val) =>
+                    setFormData({ ...formData, id_clase_fija: val })
+                  }
+                >
+                  <SelectTrigger id="id_clase_fija">
+                    <SelectValue placeholder="Sin turno fijo (Modalidad libre)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ninguna">
+                      Sin turno fijo (El socio reserva libremente)
+                    </SelectItem>
+                    {clases.map((c) => {
+                      const ocupados = c.inscritos_fijos ?? 0;
+                      const lleno = ocupados >= c.cupo_maximo;
+                      return (
+                        <SelectItem
+                          key={c.id}
+                          value={String(c.id)}
+                          disabled={lleno}
+                        >
+                          {c.nombre} ({c.hora_inicio}hs - {c.dias_semana}) [
+                          {ocupados}/{c.cupo_maximo}]
+                          {c.modalidad === "fijo" ? " • Turno Fijo" : ""}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Si el gimnasio trabaja con turnos fijos, seleccioná aquí el
+                  horario del alumno para dejarlo inscripto.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="fecha_inicio">Fecha de Inicio *</Label>

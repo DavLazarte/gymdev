@@ -24,12 +24,12 @@ interface ProfileFormProps {
 
 export function ProfileForm({ user }: ProfileFormProps) {
   const [formData, setFormData] = useState({
-    nombre: user.nombre || user.name || "", // Fallback for name variation
+    nombre: user.nombre || user.name || "",
     email: user.email || "",
     telefono: user.telefono || user.phone || "",
     password: "",
     password_confirmation: "",
-    foto: user.foto || user.image || "",
+    foto: user.foto || user.avatar_url || user.image || "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -51,16 +51,56 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setSuccess(false);
     setError("");
 
+    if (formData.password) {
+      if (formData.password.length < 6) {
+        setError("La nueva contraseña debe tener al menos 6 caracteres.");
+        return;
+      }
+      if (formData.password !== formData.password_confirmation) {
+        setError("Las contraseñas no coinciden.");
+        return;
+      }
+    }
+
+    setIsLoading(true);
+
     try {
-      await api.updateProfile(formData);
+      const res: any = await api.updateProfile(formData);
+      const updatedSocio = res?.socio || res?.user || {};
+
+      try {
+        const raw = localStorage.getItem("auth_user");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const nextName =
+            updatedSocio.nombre || formData.nombre || parsed.name;
+          const nextFoto =
+            updatedSocio.foto ||
+            updatedSocio.avatar_url ||
+            formData.foto ||
+            parsed.foto;
+          const nextUser = {
+            ...parsed,
+            name: nextName,
+            nombre: nextName,
+            nombre_completo: nextName,
+            email: updatedSocio.email || formData.email || parsed.email,
+            telefono:
+              updatedSocio.telefono || formData.telefono || parsed.telefono,
+            foto: nextFoto,
+            avatar_url: nextFoto,
+            image: nextFoto,
+          };
+          localStorage.setItem("auth_user", JSON.stringify(nextUser));
+          window.dispatchEvent(new Event("user-profile-updated"));
+        }
+      } catch {}
 
       if (formData.password) {
         setSuccess(true);
-        // Pequeño delay para que el usuario vea el éxito antes de salir
         setTimeout(async () => {
           try {
             await api.logout();
@@ -68,6 +108,12 @@ export function ProfileForm({ user }: ProfileFormProps) {
           router.push("/login");
         }, 1500);
       } else {
+        if (updatedSocio.foto || updatedSocio.avatar_url) {
+          setFormData((prev) => ({
+            ...prev,
+            foto: updatedSocio.foto || updatedSocio.avatar_url,
+          }));
+        }
         setSuccess(true);
         setTimeout(() => setSuccess(false), 3000);
       }
@@ -86,19 +132,25 @@ export function ProfileForm({ user }: ProfileFormProps) {
     <Card>
       <CardHeader>
         <CardTitle>Información Personal</CardTitle>
-        <CardDescription>Actualiza tus datos de contacto</CardDescription>
+        <CardDescription>
+          Actualiza tus datos de contacto, foto y contraseña
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="foto">Foto de Perfil</Label>
             <div className="flex items-center gap-4">
-              {formData.foto && (
+              {formData.foto ? (
                 <img
                   src={formData.foto}
                   alt="Preview"
-                  className="h-16 w-16 rounded-full object-cover border"
+                  className="h-16 w-16 rounded-full object-cover border border-primary/30 shrink-0"
                 />
+              ) : (
+                <div className="h-16 w-16 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg shrink-0">
+                  {(formData.nombre || "U").slice(0, 2).toUpperCase()}
+                </div>
               )}
               <Input
                 id="foto"
@@ -111,10 +163,15 @@ export function ProfileForm({ user }: ProfileFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label>Nombre completo</Label>
-            <div className="p-3 bg-muted rounded-md text-sm font-medium">
-              {formData.nombre}
-            </div>
+            <Label htmlFor="nombre">Nombre completo</Label>
+            <Input
+              id="nombre"
+              type="text"
+              value={formData.nombre}
+              onChange={(e) => handleChange("nombre", e.target.value)}
+              disabled={isLoading}
+              required
+            />
           </div>
 
           <div className="space-y-2">
@@ -126,6 +183,18 @@ export function ProfileForm({ user }: ProfileFormProps) {
               onChange={(e) => handleChange("email", e.target.value)}
               disabled={isLoading}
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="telefono">Teléfono</Label>
+            <Input
+              id="telefono"
+              type="tel"
+              value={formData.telefono}
+              onChange={(e) => handleChange("telefono", e.target.value)}
+              disabled={isLoading}
+              placeholder="Ej: 351 1234567"
             />
           </div>
 
@@ -154,6 +223,12 @@ export function ProfileForm({ user }: ProfileFormProps) {
               placeholder="Repetir nueva contraseña"
             />
           </div>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
           {success && (
             <Alert className="border-primary bg-primary/10">

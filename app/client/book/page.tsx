@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { ClassSlot } from "@/lib/types";
 import { useRequireRole } from "@/hooks/useRequireRole";
-import { ChevronLeft, Filter, Loader2, History } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  History,
+  CheckCircle2,
+} from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -18,7 +24,6 @@ import {
 import Link from "next/link";
 import { format, addDays, subDays } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronRight } from "lucide-react";
 
 export default function BookClassPage() {
   const { user, loading: roleLoading } = useRequireRole("gym_socio");
@@ -36,13 +41,21 @@ export default function BookClassPage() {
   const loadClasses = async (date: Date = selectedDate) => {
     try {
       setIsLoading(true);
-      const dateStr = format(date, "yyyy-MM-dd");
-      const [classesData, profileData] = await Promise.all([
-        api.getAvailableClasses(dateStr, dateStr),
-        api.getProfile(),
-      ]);
-      setClasses(classesData);
-      setProfile(profileData.socio);
+      const profileData = await api.getProfile();
+      const socio = profileData.socio;
+      setProfile(socio);
+
+      if (socio?.tiene_turno_fijo) {
+        // Si el socio está vinculado a una clase fija, mostramos directamente sus próximas sesiones de la semana
+        const startStr = format(new Date(), "yyyy-MM-dd");
+        const endStr = format(addDays(new Date(), 6), "yyyy-MM-dd");
+        const classesData = await api.getAvailableClasses(startStr, endStr);
+        setClasses(classesData || []);
+      } else {
+        const dateStr = format(date, "yyyy-MM-dd");
+        const classesData = await api.getAvailableClasses(dateStr, dateStr);
+        setClasses(classesData || []);
+      }
     } catch (error) {
       console.error("Error loading classes:", error);
     } finally {
@@ -51,7 +64,6 @@ export default function BookClassPage() {
   };
 
   const handleDateChange = (newDate: Date) => {
-    // Restricción para socios: no más allá de mañana
     if (profile?.tipo_persona === "cliente") {
       const tomorrow = addDays(new Date(), 1);
       tomorrow.setHours(23, 59, 59, 999);
@@ -80,15 +92,17 @@ export default function BookClassPage() {
 
   if (!user) return null;
 
+  const tieneTurnoFijo =
+    !!profile?.tiene_turno_fijo || classes.some((c) => c.es_turno_fijo);
   const upcomingClasses = classes.filter((c) => !c.clase_pasada);
   const pastClasses = classes.filter((c) => c.clase_pasada);
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-4 text-foreground">
+    <div className="min-h-screen overflow-x-hidden bg-background pb-20 md:pb-4 text-foreground">
       <AppHeader
-        userName={user.name}
+        userName={profile?.nombre || user.name}
         userRole="client"
-        userImage={(user as any).foto}
+        userImage={profile?.foto || (user as any).foto}
       />
 
       <main className="container mx-auto max-w-2xl space-y-6 p-4">
@@ -100,60 +114,79 @@ export default function BookClassPage() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Reservar Clase
+              {tieneTurnoFijo ? "Mi Clase Asignada" : "Reservar Clase"}
             </h1>
             <p className="text-sm text-primary font-medium">
-              Programación de Clases
+              {tieneTurnoFijo
+                ? "Confirmación de Asistencia"
+                : "Programación de Clases"}
             </p>
           </div>
         </div>
 
-        {/* Date Selector */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between bg-card p-2 rounded-xl border border-border shadow-sm">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleDateChange(subDays(selectedDate, 1))}
-              className="h-9 w-9"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-
-            <div className="flex flex-col items-center">
-              <span className="text-sm font-bold capitalize">
-                {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
-              </span>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                {format(selectedDate, "yyyy")}
-              </span>
+        {tieneTurnoFijo ? (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+            <div className="space-y-1 text-sm">
+              <p className="font-semibold text-foreground">
+                Ya estás anotado en tu clase fija
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Tu coach ya te asignó a esta clase. Solo debes confirmar con{" "}
+                <strong>&quot;Voy&quot;</strong> si vas a asistir o{" "}
+                <strong>&quot;No voy&quot;</strong> para liberar tu lugar ese
+                día.
+              </p>
             </div>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleDateChange(addDays(selectedDate, 1))}
-              className="h-9 w-9"
-              disabled={isNextDisabled()}
-            >
-              <ChevronRight className="h-5 w-5" />
-            </Button>
           </div>
-
-          {format(selectedDate, "yyyy-MM-dd") !==
-            format(new Date(), "yyyy-MM-dd") && (
-            <div className="flex justify-center">
+        ) : (
+          /* Date Selector para flujo de clases abiertas */
+          <div className="space-y-2">
+            <div className="flex items-center justify-between bg-card p-2 rounded-xl border border-border shadow-sm">
               <Button
-                variant="link"
-                size="sm"
-                onClick={() => handleDateChange(new Date())}
-                className="text-xs h-6 text-primary"
+                variant="ghost"
+                size="icon"
+                onClick={() => handleDateChange(subDays(selectedDate, 1))}
+                className="h-9 w-9"
               >
-                Volver a Hoy
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+
+              <div className="flex flex-col items-center">
+                <span className="text-sm font-bold capitalize">
+                  {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
+                </span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                  {format(selectedDate, "yyyy")}
+                </span>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleDateChange(addDays(selectedDate, 1))}
+                className="h-9 w-9"
+                disabled={isNextDisabled()}
+              >
+                <ChevronRight className="h-5 w-5" />
               </Button>
             </div>
-          )}
-        </div>
+
+            {format(selectedDate, "yyyy-MM-dd") !==
+              format(new Date(), "yyyy-MM-dd") && (
+              <div className="flex justify-center">
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={() => handleDateChange(new Date())}
+                  className="text-xs h-6 text-primary"
+                >
+                  Volver a Hoy
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Classes List */}
         <div className="space-y-6">
@@ -180,7 +213,7 @@ export default function BookClassPage() {
                       key={classSession.id}
                       classSession={classSession}
                       showBookButton
-                      onBooked={loadClasses}
+                      onBooked={() => loadClasses(selectedDate)}
                       currentUserType={profile?.tipo_persona}
                     />
                   ))}
@@ -197,7 +230,7 @@ export default function BookClassPage() {
                     key={classSession.id}
                     classSession={classSession}
                     showBookButton
-                    onBooked={loadClasses}
+                    onBooked={() => loadClasses(selectedDate)}
                     currentUserType={profile?.tipo_persona}
                   />
                 ))
@@ -213,17 +246,6 @@ export default function BookClassPage() {
                 )}
           </div>
         </div>
-
-        {classes.length === 0 && !isLoading && (
-          <div className="rounded-lg border border-dashed border-border p-8 text-center">
-            <h3 className="text-lg font-semibold text-foreground">
-              No hay clases hoy
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Vuelve pronto para ver la programación
-            </p>
-          </div>
-        )}
       </main>
 
       <MobileNav role="client" />

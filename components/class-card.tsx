@@ -68,6 +68,9 @@ export function ClassCard({
   const isLowAvailability =
     classSession.disponibles > 0 && classSession.disponibles <= 3;
   const isBooked = classSession.reservada;
+  const isFixedTurn = !!classSession.es_turno_fijo;
+  const isConfirmedToday = !!classSession.confirmado_hoy;
+  const isNoAsisteToday = !!classSession.baja_fijo_hoy;
 
   const handleBook = async () => {
     if (isProcessingRef.current) return;
@@ -77,32 +80,37 @@ export function ClassCard({
     try {
       await api.createReserva({
         id_clase_gym: classSession.clase_id,
+        turno_id: classSession.turno_id,
         fecha_reserva: classSession.fecha,
+        accion: "confirmar",
       });
       toast({
-        title: "¡Reserva confirmada!",
-        description: `Te has anotado en ${classSession.nombre}.`,
+        title: isFixedTurn ? "¡Asistencia confirmada!" : "¡Reserva confirmada!",
+        description: isFixedTurn
+          ? `Confirmaste que asistís a ${classSession.nombre}.`
+          : `Te has anotado en ${classSession.nombre}.`,
       });
       onBooked?.();
     } catch (error: any) {
-      // Manejo especial para "falsos positivos" por reintentos o lentitud de red
-      const isDuplicate = error.status === 400 && error.message?.toLowerCase().includes("ya tienes");
+      const isDuplicate =
+        error.status === 400 &&
+        error.message?.toLowerCase().includes("ya tienes");
       const isProcessing = error.status === 429;
 
       if (isDuplicate || isProcessing) {
         toast({
           title: "Verificando tu reserva...",
-          description: "Parece que tu reserva ya se procesó correctamente. Por favor, recargá la página para confirmarla en tu lista.",
+          description:
+            "Parece que tu reserva ya se procesó correctamente. Por favor, recargá la página para confirmarla en tu lista.",
         });
-        // Si es duplicado, forzamos actualización local
         if (isDuplicate) onBooked?.();
         return;
       }
 
       toast({
         variant: "destructive",
-        title: "Error al reservar",
-        description: error.message || "No se pudo procesar tu reserva.",
+        title: isFixedTurn ? "Error al confirmar" : "Error al reservar",
+        description: error.message || "No se pudo procesar tu solicitud.",
       });
     } finally {
       isProcessingRef.current = false;
@@ -112,20 +120,33 @@ export function ClassCard({
   };
 
   const handleCancel = async () => {
-    if (!classSession.reserva_id) return;
     setIsDeleting(true);
     try {
-      await api.cancelReserva(classSession.reserva_id);
-      toast({
-        title: "Reserva cancelada",
-        description: `Ya no estás anotado en ${classSession.nombre}.`,
-      });
+      if (isFixedTurn) {
+        await api.createReserva({
+          id_clase_gym: classSession.clase_id,
+          turno_id: classSession.turno_id,
+          fecha_reserva: classSession.fecha,
+          baja_fijo: true,
+          accion: "no_asisto",
+        });
+        toast({
+          title: "Inasistencia avisada",
+          description: `Avisaste que no vas a ${classSession.nombre} ese día. Tu cupo quedó liberado.`,
+        });
+      } else if (classSession.reserva_id) {
+        await api.cancelReserva(classSession.reserva_id);
+        toast({
+          title: "Reserva cancelada",
+          description: `Ya no estás anotado en ${classSession.nombre}.`,
+        });
+      }
       onBooked?.();
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error al cancelar",
-        description: error.message || "No se pudo cancelar la reserva.",
+        title: "Error",
+        description: error.message || "No se pudo procesar la acción.",
       });
     } finally {
       setIsDeleting(false);
@@ -187,11 +208,15 @@ export function ClassCard({
   return (
     <>
       <Card
-        className={cn("transition-all", isFull && !isBooked && "opacity-60")}
+        className={cn(
+          "transition-all",
+          isFull && !isBooked && !isFixedTurn && "opacity-60",
+          isFixedTurn && "border-primary/30"
+        )}
       >
         <CardContent className="p-4">
           <div className="space-y-3">
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between gap-2">
               <div className="space-y-1">
                 <h3 className="font-semibold text-foreground">
                   {classSession.nombre}
@@ -200,7 +225,24 @@ export function ClassCard({
                   {classSession.estado_clase}
                 </Badge>
               </div>
-              {isBooked ? (
+              {isFixedTurn ? (
+                isNoAsisteToday ? (
+                  <Badge
+                    variant="outline"
+                    className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs"
+                  >
+                    Avisaste que no vas
+                  </Badge>
+                ) : isConfirmedToday ? (
+                  <Badge className="bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30 text-xs">
+                    Asistencia confirmada
+                  </Badge>
+                ) : (
+                  <Badge className="bg-primary/15 text-primary border-primary/30 text-xs">
+                    Ya anotado · Turno fijo
+                  </Badge>
+                )
+              ) : isBooked ? (
                 <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
                   Inscripto
                 </Badge>
@@ -371,54 +413,114 @@ export function ClassCard({
 
               {showBookButton && (
                 <div className="flex gap-2">
-                  {isBooked && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-destructive border-destructive/20 hover:bg-destructive/10 h-8 px-2"
-                      onClick={handleCancel}
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    disabled={
-                      isFull ||
-                      classSession.puede_reservar === false ||
-                      classSession.clase_pasada === true ||
-                      (isBooked && !isDeleting) ||
-                      isBooking
-                    }
-                    onClick={() => setShowDialog(true)}
-                    className={cn(
-                      "h-8",
-                      isBooked &&
-                        "bg-primary/20 text-primary hover:bg-primary/20 border-primary/20",
-                    )}
-                  >
-                    {isBooking ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : isBooked ? (
-                      <>
-                        <CheckCircle2 className="mr-1 h-4 w-4" />
-                        Reservada
-                      </>
-                    ) : classSession.clase_pasada ? (
-                      "Clase pasada"
-                    ) : isFull ? (
-                      "No disponible"
-                    ) : classSession.puede_reservar === false ? (
-                      "Fuera de tiempo"
+                  {isFixedTurn ? (
+                    classSession.clase_pasada ? (
+                      <Button size="sm" disabled className="h-8">
+                        Clase pasada
+                      </Button>
                     ) : (
-                      "Reservar"
-                    )}
-                  </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant={
+                            isConfirmedToday && !isNoAsisteToday
+                              ? "default"
+                              : "outline"
+                          }
+                          disabled={
+                            isBooking ||
+                            isDeleting ||
+                            (isConfirmedToday && !isNoAsisteToday)
+                          }
+                          onClick={handleBook}
+                          className={cn(
+                            "h-8 gap-1",
+                            isConfirmedToday &&
+                              !isNoAsisteToday &&
+                              "bg-green-600 hover:bg-green-700 text-white border-green-600"
+                          )}
+                        >
+                          {isBooking ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Check className="h-4 w-4" />
+                          )}
+                          {isConfirmedToday && !isNoAsisteToday
+                            ? "Confirmado"
+                            : "Voy"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={isNoAsisteToday ? "destructive" : "outline"}
+                          disabled={isBooking || isDeleting || isNoAsisteToday}
+                          onClick={handleCancel}
+                          className={cn(
+                            "h-8 gap-1",
+                            !isNoAsisteToday &&
+                              "text-destructive border-destructive/30 hover:bg-destructive/10"
+                          )}
+                        >
+                          {isDeleting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                          No voy
+                        </Button>
+                      </>
+                    )
+                  ) : (
+                    <>
+                      {isBooked && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive border-destructive/20 hover:bg-destructive/10 h-8 px-2"
+                          onClick={handleCancel}
+                          disabled={isDeleting}
+                        >
+                          {isDeleting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        disabled={
+                          isFull ||
+                          classSession.puede_reservar === false ||
+                          classSession.clase_pasada === true ||
+                          (isBooked && !isDeleting) ||
+                          isBooking
+                        }
+                        onClick={() => setShowDialog(true)}
+                        className={cn(
+                          "h-8",
+                          isBooked &&
+                            "bg-primary/20 text-primary hover:bg-primary/20 border-primary/20"
+                        )}
+                      >
+                        {isBooking ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : isBooked ? (
+                          <>
+                            <CheckCircle2 className="mr-1 h-4 w-4" />
+                            Reservada
+                          </>
+                        ) : classSession.clase_pasada ? (
+                          "Clase pasada"
+                        ) : isFull ? (
+                          "No disponible"
+                        ) : classSession.puede_reservar === false ? (
+                          "Fuera de tiempo"
+                        ) : (
+                          "Reservar"
+                        )}
+                      </Button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -451,7 +553,7 @@ export function ClassCard({
                 {
                   day: "numeric",
                   month: "long",
-                },
+                }
               )}{" "}
               a las {classSession.hora}?
             </AlertDialogDescription>

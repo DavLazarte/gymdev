@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Pencil, Users, Clock } from "lucide-react";
+import { Plus, Search, Pencil, Users, Clock, Lock, Unlock, UserPlus } from "lucide-react";
 import { ClaseDialog } from "@/components/clase-dialog";
 import { ClaseDetailDialog } from "@/components/clase-detail-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -25,9 +25,23 @@ export default function ClasesPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingClase, setEditingClase] = useState<Clase | null>(null);
   const [viewingClase, setViewingClase] = useState<Clase | null>(null);
+  const [isCoach, setIsCoach] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem("auth_user");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (
+          parsed?.role_name === "gym_staff" ||
+          parsed?.role === "coach" ||
+          parsed?.rol === "coach"
+        ) {
+          setIsCoach(true);
+        }
+      }
+    } catch {}
     loadClases();
   }, []);
 
@@ -58,6 +72,13 @@ export default function ClasesPage() {
     loadClases();
   };
 
+  const handleClaseChanged = (updatedClase: Clase) => {
+    setViewingClase(updatedClase);
+    setClases((prev) =>
+      prev.map((c) => (String(c.id) === String(updatedClase.id) ? updatedClase : c))
+    );
+  };
+
   const getCupoColor = (inscritos: number, cupoMaximo: number) => {
     const percentage = (inscritos / cupoMaximo) * 100;
     if (percentage >= 90) return "text-destructive";
@@ -70,15 +91,21 @@ export default function ClasesPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Clases</h1>
+            <h1 className="text-3xl font-bold text-foreground">
+              {isCoach ? "Mis Clases" : "Clases y Turnos"}
+            </h1>
             <p className="text-sm text-muted-foreground">
-              Gestiona las clases del gimnasio
+              {isCoach
+                ? "Visualiza tus clases asignadas y los alumnos inscriptos"
+                : "Gestiona las clases abiertas por reserva y los turnos fijos del gimnasio"}
             </p>
           </div>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Nueva Clase
-          </Button>
+          {!isCoach && (
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Nueva Clase
+            </Button>
+          )}
         </div>
 
         <div className="relative">
@@ -92,83 +119,125 @@ export default function ClasesPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredClases.map((clase) => (
-            <Card
-              key={clase.id}
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => setViewingClase(clase)}
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle>{clase.nombre}</CardTitle>
-                    <CardDescription className="mt-1">
-                      {clase.coach?.nombre}
-                    </CardDescription>
+          {filteredClases.map((clase) => {
+            const esTurnoFijo = clase.modalidad === "fijo";
+            const ocupados = esTurnoFijo
+              ? clase.inscritos_fijos ?? clase.inscritos_hoy ?? 0
+              : clase.inscritos_hoy ?? 0;
+
+            return (
+              <Card
+                key={clase.id}
+                className="cursor-pointer transition-shadow hover:shadow-md"
+                onClick={() => setViewingClase(clase)}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <CardTitle>{clase.nombre}</CardTitle>
+                      <CardDescription className="mt-1">
+                        {clase.coach?.nombre}
+                      </CardDescription>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <Badge
+                        variant={
+                          clase.estado === "activa" ? "default" : "secondary"
+                        }
+                      >
+                        {clase.estado === "activa" ? "Activa" : "Cancelada"}
+                      </Badge>
+                      <Badge
+                        variant={esTurnoFijo ? "secondary" : "outline"}
+                        className="text-xs"
+                      >
+                        {esTurnoFijo ? (
+                          <span className="flex items-center gap-1">
+                            <Lock className="h-3 w-3" /> Turno Fijo
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1">
+                            <Unlock className="h-3 w-3" /> Abierta
+                          </span>
+                        )}
+                      </Badge>
+                    </div>
                   </div>
-                  <Badge
-                    variant={
-                      clase.estado === "activa" ? "default" : "secondary"
-                    }
-                  >
-                    {clase.estado === "activa" ? "Activa" : "Cancelada"}
-                  </Badge>
-                </div>
-              </CardHeader>
+                </CardHeader>
 
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  <span>
-                    {clase.hora_inicio} - {clase.duracion_minutos} min
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap gap-1">
-                  {clase.dias_semana.split(",").map((dia) => (
-                    <Badge key={dia} variant="outline" className="text-xs">
-                      {dia}
-                    </Badge>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span
-                      className={`text-sm font-medium ${getCupoColor(
-                        clase.inscritos_hoy || 0,
-                        clase.cupo_maximo
-                      )}`}
-                    >
-                      {clase.inscritos_hoy || 0}/{clase.cupo_maximo}
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span>
+                      {clase.hora_inicio} - {clase.duracion_minutos} min
                     </span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingClase(clase);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </div>
 
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full bg-primary transition-all"
-                    style={{
-                      width: `${
-                        ((clase.inscritos_hoy || 0) / clase.cupo_maximo) * 100
-                      }%`,
-                    }}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex flex-wrap gap-1">
+                    {clase.dias_semana.split(",").map((dia) => (
+                      <Badge key={dia} variant="outline" className="text-xs">
+                        {dia}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span
+                        className={`text-sm font-medium ${getCupoColor(
+                          ocupados,
+                          clase.cupo_maximo
+                        )}`}
+                      >
+                        {ocupados}/{clase.cupo_maximo}{" "}
+                        {esTurnoFijo ? "fijos" : "cupos"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setViewingClase(clase);
+                        }}
+                      >
+                        <UserPlus className="h-3.5 w-3.5" />
+                        Alumnos ({clase.inscritos_fijos ?? 0})
+                      </Button>
+                      {!isCoach && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingClase(clase);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full bg-primary transition-all"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          (ocupados / clase.cupo_maximo) * 100
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {filteredClases.length === 0 && (
@@ -201,10 +270,16 @@ export default function ClasesPage() {
         open={!!viewingClase}
         onOpenChange={(open) => !open && setViewingClase(null)}
         clase={viewingClase}
-        onEdit={(clase) => {
-          setViewingClase(null);
-          setEditingClase(clase);
-        }}
+        onChanged={handleClaseChanged}
+        isCoach={isCoach}
+        onEdit={
+          isCoach
+            ? undefined
+            : (clase) => {
+                setViewingClase(null);
+                setEditingClase(clase);
+              }
+        }
       />
     </>
   );

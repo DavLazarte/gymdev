@@ -56,6 +56,7 @@ export function ClaseDialog({
 
   const [formData, setFormData] = useState({
     nombre: "",
+    modalidad: "libre" as "libre" | "fijo",
     idservicio: "",
     id_coach: "",
     dias_semana: [] as string[],
@@ -98,6 +99,7 @@ export function ClaseDialog({
     if (clase) {
       setFormData({
         nombre: clase.nombre,
+        modalidad: clase.modalidad === "fijo" ? "fijo" : "libre",
         idservicio: clase.idservicio || "",
         id_coach: clase.id_coach,
         dias_semana: clase.dias_semana.split(","),
@@ -116,6 +118,7 @@ export function ClaseDialog({
     } else {
       setFormData({
         nombre: "",
+        modalidad: "libre",
         idservicio: "",
         id_coach: "",
         dias_semana: [],
@@ -137,6 +140,7 @@ export function ClaseDialog({
     try {
       const dataToSave = {
         nombre: formData.nombre,
+        modalidad: formData.modalidad,
         idservicio: formData.idservicio || null,
         id_coach: formData.id_coach,
         dias_semana: formData.dias_semana.join(","),
@@ -209,9 +213,36 @@ export function ClaseDialog({
               onChange={(e) =>
                 setFormData({ ...formData, nombre: e.target.value })
               }
-              placeholder="Ej: Yoga Mañana, CrossFit Intensivo..."
+              placeholder="Ej: Yoga Mañana, CrossFit 18hs..."
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="modalidad">Modalidad del Turno *</Label>
+            <Select
+              value={formData.modalidad}
+              onValueChange={(value: "libre" | "fijo") =>
+                setFormData({ ...formData, modalidad: value })
+              }
+            >
+              <SelectTrigger id="modalidad">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="libre">
+                  Clase Abierta (Por reserva libre hasta llenar cupo)
+                </SelectItem>
+                <SelectItem value="fijo">
+                  Turno Fijo (El coach/admin asigna los alumnos del turno)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {formData.modalidad === "fijo"
+                ? "En Turno Fijo podés asignar los alumnos desde el detalle de la clase o al asignarles su membresía."
+                : "En Clase Abierta los socios eligen y reservan libremente este horario desde su cuenta."}
+            </p>
           </div>
 
           <div className="space-y-2">

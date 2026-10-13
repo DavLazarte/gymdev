@@ -31,12 +31,20 @@ import {
   IdCard,
   UserCheck,
   UserCog,
+  Dumbbell,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { SocioDialog } from "@/components/socio-dialog";
 import { SocioDetailDialog } from "@/components/socio-detail-dialog";
 import { MembresiaDialog } from "@/components/membresia-dialog";
 import { UserSetupDialog } from "@/components/user-setup-dialog";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
+import { StudentRMsView } from "@/components/student-rms-view";
 import { useToast } from "@/hooks/use-toast";
 import type { Socio } from "@/lib/types";
 import { api } from "@/lib/api";
@@ -53,6 +61,8 @@ export default function SociosPage() {
   const [isMembresiaDialogOpen, setIsMembresiaDialogOpen] = useState(false);
   const [selectedSocioId, setSelectedSocioId] = useState<string | null>(null);
   const [setupUserSocio, setSetupUserSocio] = useState<Socio | null>(null);
+  const [viewingRmsSocio, setViewingRmsSocio] = useState<Socio | null>(null);
+  const [viewingRmsList, setViewingRmsList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -221,6 +231,7 @@ export default function SociosPage() {
         title: "Membresía asignada",
         description: "El plan se ha asignado correctamente.",
       });
+      setIsMembresiaDialogOpen(false);
       loadSocios();
     } catch (error: any) {
       toast({
@@ -236,13 +247,22 @@ export default function SociosPage() {
       activo: "default",
       inactivo: "secondary",
       vencido: "destructive",
+      prospecto: "outline",
     };
     const labels = {
       activo: "Activo",
       inactivo: "Inactivo",
       vencido: "Vencido",
+      prospecto: "Prospecto / Lead",
     };
-    return <Badge variant={variants[estado] as any}>{labels[estado]}</Badge>;
+    return (
+      <Badge
+        variant={variants[estado] as any}
+        className={estado === "prospecto" ? "border-primary text-primary bg-primary/10 font-medium" : undefined}
+      >
+        {labels[estado] || estado}
+      </Badge>
+    );
   };
 
   return (
@@ -277,8 +297,9 @@ export default function SociosPage() {
               <SelectValue placeholder="Filtrar por estado" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="todos">Todos los estados</SelectItem>
               <SelectItem value="activo">Activos</SelectItem>
+              <SelectItem value="prospecto">Prospectos / Leads (Landing)</SelectItem>
               <SelectItem value="inactivo">Inactivos</SelectItem>
               <SelectItem value="vencido">Vencidos</SelectItem>
             </SelectContent>
@@ -373,6 +394,22 @@ export default function SociosPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={async () => {
+                            setViewingRmsSocio(socio);
+                            try {
+                              const res = await api.getRms(socio.id);
+                              setViewingRmsList(res.rms || []);
+                            } catch {
+                              setViewingRmsList([]);
+                            }
+                          }}
+                          title="Ver RMs del Alumno"
+                        >
+                          <Dumbbell className="h-4 w-4 text-orange-500" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon-sm"
@@ -520,6 +557,27 @@ export default function SociosPage() {
           });
         }}
       />
+
+      <Dialog
+        open={!!viewingRmsSocio}
+        onOpenChange={(open) => !open && setViewingRmsSocio(null)}
+      >
+        <DialogContent
+          className="max-h-[90vh] w-full max-w-[95vw] overflow-y-auto p-4 sm:max-w-5xl sm:p-6"
+          aria-describedby={undefined}
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>RMs de {viewingRmsSocio?.nombre}</DialogTitle>
+          </DialogHeader>
+          {viewingRmsSocio && (
+            <StudentRMsView
+              alumno={viewingRmsSocio}
+              rms={viewingRmsList}
+              readOnly
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

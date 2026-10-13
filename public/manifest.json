@@ -1,12 +1,13 @@
 {
-  "name": "Vértice Gym Management",
-  "short_name": "Vértice Gym",
-  "description": "Sistema de gestión integral para gimnasios y centros de fitness.",
+  "name": "DevGym Fitness & Coaching",
+  "short_name": "DevGym",
+  "description": "Plataforma integral de gestión, reservas y entrenamientos para Boxes y Gimnasios.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2d5f3f",
-  "id": "/vertice-gym",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "id": "/devgym-app",
   "orientation": "portrait-primary",
   "icons": [
     {

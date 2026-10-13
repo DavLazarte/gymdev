@@ -57,6 +57,7 @@ export interface Plan {
 export interface Clase {
   id: string
   nombre: string
+  modalidad?: "libre" | "fijo"
   idservicio?: string
   id_coach: string
   dias_semana: string // Comma separated: "Lunes,Miércoles"
@@ -68,6 +69,17 @@ export interface Clase {
   minutos_limite_reserva?: number
   minutos_limite_cancelacion?: number
   inscritos_hoy?: number
+  inscritos_fijos?: number
+  alumnos_fijos?: {
+    id: string
+    alumno_id?: number
+    nombre: string
+    email?: string
+    telefono?: string
+    dni?: string
+    fecha_alta?: string
+    tiene_membresia_activa?: boolean
+  }[]
   // Relational data for UI
   tipo_clase?: {
     nombre: string
@@ -145,18 +157,31 @@ export interface ClassSlot {
   estado_clase: string
   puede_reservar?: boolean
   clase_pasada?: boolean
+  turno_id?: number
+  grupo_id?: number
+  es_turno_fijo?: boolean
+  confirmado_hoy?: boolean
+  baja_fijo_hoy?: boolean
+  estado_inscripcion?: "anotado_fijo" | "confirmada" | "no_asiste" | "libre"
 }
 
 export interface Reserva {
   id: string
   id_persona: string
   id_clase_gym: string
+  grupo_id?: number
+  turno_id?: number
   fecha_reserva: string
-  id_membresia: string
-  estado: "reservada" | "asistio" | "cancelada" | "ausente"
+  id_membresia?: string
+  estado: "reservada" | "asistio" | "cancelada" | "ausente" | "anotado_fijo" | "baja_fijo"
+  es_turno_fijo?: boolean
+  confirmado?: boolean
+  no_asiste?: boolean
   clase?: {
+    id?: string
     nombre: string
     hora_inicio: string
+    coach?: string
   }
   persona?: {
     nombre: string

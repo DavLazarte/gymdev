@@ -1,16 +1,43 @@
 "use client";
 
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/admin-layout";
 import { useRequireRole } from "@/hooks/useRequireRole";
+
+const COACH_ALLOWED_PATHS = [
+  "/admin/reservas",
+  "/admin/profile",
+];
 
 export default function AdminRootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useRequireRole('gym_owner');
+  const { user, loading } = useRequireRole("gym_owner");
+  const pathname = usePathname();
+  const router = useRouter();
 
-  if (loading) {
+  const isCoach =
+    !!user &&
+    (user.role_name === "gym_staff" ||
+      (user as any).role === "coach" ||
+      (user as any).rol === "coach");
+
+  const isAllowedPath =
+    !isCoach ||
+    COACH_ALLOWED_PATHS.some(
+      (p) => pathname === p || pathname.startsWith(`${p}/`)
+    );
+
+  useEffect(() => {
+    if (!loading && isCoach && !isAllowedPath) {
+      router.replace("/admin/reservas");
+    }
+  }, [loading, isCoach, isAllowedPath, router]);
+
+  if (loading || (isCoach && !isAllowedPath)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -25,5 +52,9 @@ export default function AdminRootLayout({
     return null;
   }
 
-  return <AdminLayout userName={user.name}>{children}</AdminLayout>;
+  return (
+    <AdminLayout userName={user.name} isCoach={isCoach}>
+      {children}
+    </AdminLayout>
+  );
 }   

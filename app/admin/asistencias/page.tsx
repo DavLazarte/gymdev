@@ -80,6 +80,8 @@ export default function AsistenciasPage() {
       await api.marcarAsistencia({
         id_persona: data.id_persona,
         id_clase_gym: data.id_clase_gym,
+        fecha: data.fecha,
+        hora_entrada: data.hora_entrada,
       });
       toast({
         title: "Asistencia registrada",
@@ -100,11 +102,16 @@ export default function AsistenciasPage() {
     asistencia.persona?.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const asistenciasHoy = asistencias.filter(
-    (a) =>
-      new Date(a.fecha_asistencia).toISOString().split("T")[0] ===
-      new Date().toISOString().split("T")[0]
-  );
+  const todayLocal = (() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  })();
+
+  const asistenciasHoy = asistencias.filter((a) => {
+    const raw = String(a.fecha_asistencia || a.fecha || "");
+    const datePart = raw.includes("T") ? raw.split("T")[0] : raw.slice(0, 10);
+    return datePart === todayLocal;
+  });
   const asistenciasSemana = asistencias.length;
 
   return (

@@ -165,7 +165,7 @@ export default function AttendancePage() {
           </div>
 
           {/* Streak Badge */}
-          {/* <div className="flex flex-col items-center justify-center bg-orange-100 dark:bg-orange-950/30 px-4 py-2 rounded-xl border border-orange-200 dark:border-orange-900">
+          <div className="flex flex-col items-center justify-center bg-orange-100 dark:bg-orange-950/30 px-4 py-2 rounded-xl border border-orange-200 dark:border-orange-900">
             <div className="flex items-center gap-1">
               <Flame
                 className={cn(
@@ -180,7 +180,7 @@ export default function AttendancePage() {
             <span className="text-[10px] font-bold text-orange-600/70 dark:text-orange-400 uppercase tracking-wider">
               Racha Días
             </span>
-          </div> */}
+          </div>
         </div>
 
         {/* Calendar Card */}
@@ -207,9 +207,9 @@ export default function AttendancePage() {
                         >
                           {day.date.getDate()}
                         </span>
-                        {/* {isSelected && (
+                        {isSelected && (
                           <Flame className="absolute -bottom-0.5 h-3 w-3 text-orange-500 fill-orange-500" />
-                        )} */}
+                        )}
                       </div>
                     </td>
                   );

@@ -15,17 +15,19 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingDown,
+  Dumbbell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
-const navItems = [
+const adminNavItems = [
   { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/admin/socios", icon: Users, label: "Socios" },
   { href: "/admin/membresias", icon: CreditCard, label: "Membresías" },
   { href: "/admin/planes", icon: Package, label: "Planes" },
   { href: "/admin/clases", icon: Calendar, label: "Clases" },
+  { href: "/admin/entrenamientos", icon: Dumbbell, label: "Entrenamientos" },
   { href: "/admin/reservas", icon: Calendar, label: "Reservas" },
   { href: "/admin/instructores", icon: UserCheck, label: "Instructores" },
   { href: "/admin/asistencias", icon: Activity, label: "Asistencias" },
@@ -34,9 +36,14 @@ const navItems = [
   { href: "/admin/configuracion", icon: Settings, label: "Configuración" },
 ];
 
-export function AdminSidebar() {
+const coachNavItems = [
+  { href: "/admin/reservas", icon: UserCheck, label: "Mis Clases y Presente" },
+];
+
+export function AdminSidebar({ isCoach = false }: { isCoach?: boolean }) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const items = isCoach ? coachNavItems : adminNavItems;
 
   return (
     <aside
@@ -48,7 +55,7 @@ export function AdminSidebar() {
       <div className="flex h-full flex-col">
         <div className="flex-1 overflow-y-auto py-4">
           <nav className="space-y-1 px-2">
-            {navItems.map((item) => {
+            {items.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link

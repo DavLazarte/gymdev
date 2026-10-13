@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 import { InstallPWA } from "@/components/install-pwa";
 import { ServiceWorkerRegister } from "@/components/sw-register";
+import { TenantThemeProvider } from "@/components/tenant-theme-provider";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -21,13 +22,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vertice Center - Gestión de Gimnasio",
-  description: "Sistema de gestión para gimnasios y",
+  title: "Sistema de Gestión de Gimnasio",
+  description: "Plataforma integral de gestión y entrenamiento para Boxes y Gimnasios",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
-    title: "Vertice Center",
+    statusBarStyle: "black-translucent",
+    title: "Gimnasio",
   },
   icons: {
     icon: [
@@ -54,8 +55,8 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#2d5f3f" },
-    { media: "(prefers-color-scheme: dark)", color: "#2d5f3f" },
+    { media: "(prefers-color-scheme: light)", color: "#09090b" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
   ],
 };
 
@@ -65,8 +66,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="es" className={`dark ${geistSans.variable} ${geistMono.variable}`}>
       <body className="font-sans antialiased">
+        <TenantThemeProvider />
         <AuthProvider>
           {children}
           <InstallPWA />

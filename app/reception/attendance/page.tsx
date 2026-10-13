@@ -1,44 +1,120 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AppHeader } from "@/components/app-header"
 import { MobileNav } from "@/components/mobile-nav"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { mockClients, mockClasses } from "@/lib/mock-data"
-import { ChevronLeft, Search, CheckCircle2, Calendar } from "lucide-react"
+import { ChevronLeft, Search, CheckCircle2, Calendar, Loader2 } from "lucide-react"
+import { useRequireRole } from "@/hooks/useRequireRole"
+import { useToast } from "@/hooks/use-toast"
+import { api } from "@/lib/api"
 import Link from "next/link"
-
-const receptionUser = {
-  name: "Ana Martínez",
-  role: "reception",
-}
+import { useSearchParams } from "next/navigation"
 
 export default function RegisterAttendancePage() {
+  const { user, loading } = useRequireRole("gym_staff")
+  const { toast } = useToast()
+  const searchParams = useSearchParams()
+  const preselectedClientId = searchParams.get("client")
+
+  const [clients, setClients] = useState<any[]>([])
+  const [classes, setClasses] = useState<any[]>([])
   const [clientSearch, setClientSearch] = useState("")
   const [selectedClient, setSelectedClient] = useState<string>("")
   const [selectedClass, setSelectedClass] = useState<string>("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
 
-  const filteredClients = mockClients.filter((client) => client.name.toLowerCase().includes(clientSearch.toLowerCase()))
+  useEffect(() => {
+    if (!user) return
+    const loadData = async () => {
+      try {
+        const [sociosData, clasesData]: [any, any] = await Promise.all([
+          api.getSocios({ per_page: 200 }).catch(() => []),
+          api.getClases().catch(() => []),
+        ])
+        const sociosList = Array.isArray(sociosData)
+          ? sociosData
+          : sociosData?.socios || sociosData?.data || []
+        const clasesList = Array.isArray(clasesData)
+          ? clasesData
+          : clasesData?.data || []
+        setClients(sociosList)
+        setClasses(clasesList)
 
-  const client = mockClients.find((c) => c.id === selectedClient)
-  const classSession = mockClasses.find((c) => c.id === selectedClass)
+        if (preselectedClientId) {
+          setSelectedClient(String(preselectedClientId))
+        }
+      } catch (err) {
+        console.error("Error cargando datos de asistencia:", err)
+      }
+    }
+    loadData()
+  }, [user, preselectedClientId])
 
-  const handleRegisterAttendance = () => {
-    setSuccess(true)
-    setTimeout(() => {
-      setSuccess(false)
-      setSelectedClient("")
-      setSelectedClass("")
-    }, 3000)
+  const filteredClients = clients.filter((c) => {
+    const q = clientSearch.toLowerCase().trim()
+    if (!q) return false
+    const dni = String(c.dni || c.documento || "").toLowerCase()
+    const email = String(c.email || c.correo || "").toLowerCase()
+    return (
+      String(c.nombre || "").toLowerCase().includes(q) ||
+      dni.includes(q) ||
+      email.includes(q)
+    )
+  })
+
+  const client = clients.find((c) => String(c.id) === String(selectedClient))
+  const classSession = classes.find((c) => String(c.id) === String(selectedClass))
+
+  const handleRegisterAttendance = async () => {
+    if (!client) return
+    try {
+      setIsSubmitting(true)
+      const claseId = selectedClass && selectedClass !== "free" ? Number(selectedClass) : null
+      await api.marcarAsistencia({
+        id_persona: Number(client.id),
+        socio_id: String(client.id),
+        id_clase_gym: claseId,
+        clase_id: claseId ? String(claseId) : undefined,
+        fecha: new Date().toISOString().split("T")[0],
+        fecha_asistencia: new Date().toISOString().split("T")[0],
+      })
+      setSuccess(true)
+      toast({
+        title: "Asistencia registrada",
+        description: `Se registró la asistencia de ${client.nombre}.`,
+      })
+      setTimeout(() => {
+        setSuccess(false)
+        setSelectedClient("")
+        setSelectedClass("")
+      }, 2500)
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error al registrar asistencia",
+        description: error.message || "No se pudo registrar la asistencia.",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
-      <AppHeader userName={receptionUser.name} userRole={receptionUser.role} />
+      <AppHeader userName={user?.name || "Recepción"} userRole="reception" />
 
       <main className="container mx-auto max-w-2xl space-y-6 p-4">
         <div className="flex items-center gap-3">
@@ -49,7 +125,7 @@ export default function RegisterAttendancePage() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Registrar Asistencia</h1>
-            <p className="text-sm text-muted-foreground">Confirmar llegada de cliente</p>
+            <p className="text-sm text-muted-foreground">Confirmar llegada de socio</p>
           </div>
         </div>
 
@@ -62,11 +138,11 @@ export default function RegisterAttendancePage() {
 
         {/* Step 1: Select Client */}
         <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">1. Buscar Cliente</h2>
+          <h2 className="text-sm font-semibold text-foreground">1. Buscar Socio</h2>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar cliente..."
+              placeholder="Buscar socio por nombre o DNI..."
               value={clientSearch}
               onChange={(e) => setClientSearch(e.target.value)}
               className="pl-10"
@@ -75,17 +151,19 @@ export default function RegisterAttendancePage() {
 
           {clientSearch && (
             <div className="space-y-2">
-              {filteredClients.map((client) => (
+              {filteredClients.map((c) => (
                 <button
-                  key={client.id}
+                  key={c.id}
                   onClick={() => {
-                    setSelectedClient(client.id)
+                    setSelectedClient(String(c.id))
                     setClientSearch("")
                   }}
                   className="w-full rounded-lg border border-border p-3 text-left transition-colors hover:bg-accent"
                 >
-                  <p className="font-medium text-foreground">{client.name}</p>
-                  <p className="text-sm text-muted-foreground">{client.email}</p>
+                  <p className="font-medium text-foreground">{c.nombre}</p>
+                  <p className="text-sm text-muted-foreground">
+                    DNI: {c.dni || c.documento || "-"} · {c.email || c.correo || "Sin correo"}
+                  </p>
                 </button>
               ))}
             </div>
@@ -93,9 +171,14 @@ export default function RegisterAttendancePage() {
 
           {client && (
             <Card>
-              <CardContent className="p-3">
-                <p className="text-sm text-muted-foreground">Cliente seleccionado:</p>
-                <p className="font-semibold text-foreground">{client.name}</p>
+              <CardContent className="p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Socio seleccionado:</p>
+                  <p className="font-semibold text-foreground">{client.nombre}</p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedClient("")}>
+                  Cambiar
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -108,19 +191,19 @@ export default function RegisterAttendancePage() {
             <p className="text-sm text-muted-foreground">Selecciona una clase o registra acceso libre</p>
 
             <div className="space-y-2">
-              {mockClasses.slice(0, 3).map((classSession) => (
+              {classes.map((c) => (
                 <button
-                  key={classSession.id}
-                  onClick={() => setSelectedClass(classSession.id)}
+                  key={c.id}
+                  onClick={() => setSelectedClass(String(c.id))}
                   className={`w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent ${
-                    selectedClass === classSession.id ? "border-primary bg-primary/5" : "border-border"
+                    String(selectedClass) === String(c.id) ? "border-primary bg-primary/5" : "border-border"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-foreground">{classSession.name}</p>
+                      <p className="font-semibold text-foreground">{c.nombre}</p>
                       <p className="text-sm text-muted-foreground">
-                        {classSession.time} - {classSession.instructor}
+                        {String(c.hora_inicio || "").substring(0, 5)} hs - {c.instructor_nombre || "Instructor"}
                       </p>
                     </div>
                     <Calendar className="h-5 w-5 text-muted-foreground" />
@@ -148,13 +231,13 @@ export default function RegisterAttendancePage() {
               <h3 className="mb-3 font-semibold text-foreground">Confirmar Asistencia</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Cliente:</span>
-                  <span className="font-medium text-foreground">{client.name}</span>
+                  <span className="text-muted-foreground">Socio:</span>
+                  <span className="font-medium text-foreground">{client.nombre}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Clase:</span>
                   <span className="font-medium text-foreground">
-                    {selectedClass === "free" ? "Acceso Libre" : classSession?.name}
+                    {selectedClass === "free" ? "Acceso Libre" : classSession?.nombre}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -168,9 +251,18 @@ export default function RegisterAttendancePage() {
                   </span>
                 </div>
               </div>
-              <Button className="mt-4 w-full" onClick={handleRegisterAttendance}>
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Confirmar Asistencia
+              <Button className="mt-4 w-full" onClick={handleRegisterAttendance} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Registrando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Confirmar Asistencia
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>
@@ -181,3 +273,4 @@ export default function RegisterAttendancePage() {
     </div>
   )
 }
+

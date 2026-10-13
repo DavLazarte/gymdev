@@ -33,10 +33,10 @@ export function LoginForm() {
       const roleName = response.user.role_name
       
       // Redirección según el nombre del rol (de tu tabla)
-      if (roleName === 'gym_owner') {
+      if (roleName === 'gym_owner' || roleName === 'gym_admin') {
         router.push("/admin")
-      } else if (roleName === 'gym_staff') {
-        router.push("/reception")
+      } else if (roleName === 'gym_staff' || roleName === 'coach') {
+        router.push("/admin/reservas")
       } else if (roleName === 'gym_socio') {
         router.push("/client")
       } else {

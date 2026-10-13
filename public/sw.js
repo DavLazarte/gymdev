@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vertice-gym-v1.22.0'; // IMPORTANTE: Cambiar versión
+const CACHE_NAME = 'devgym-pwa-v2.0.0';
 const URLS_TO_CACHE = [
   '/',
   '/manifest.json',
@@ -10,26 +10,20 @@ const APP_ORIGIN = self.location.origin;
 
 // Instalación
 self.addEventListener('install', (event) => {
-  console.log('[SW] Instalando v1.22.0');
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[SW] Abriendo caché:', CACHE_NAME);
-        return cache.addAll(URLS_TO_CACHE);
-      })
+      .then((cache) => cache.addAll(URLS_TO_CACHE))
       .then(() => self.skipWaiting())
   );
 });
 
 // Activación
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activando v1.22.0');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('[SW] Borrando caché antiguo:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -44,20 +38,17 @@ self.addEventListener('fetch', (event) => {
   
   // CRÍTICO: Solo interceptar requests de NUESTRO dominio
   if (url.origin !== APP_ORIGIN) {
-    console.log('[SW] Ignorando dominio externo:', url.origin);
-    return; // Esto está OK porque es dominio externo
+    return;
   }
 
   // Solo cachear peticiones GET
   if (event.request.method !== 'GET') {
-    console.log('[SW] Ignorando método:', event.request.method);
-    return fetch(event.request); // ← FIX: Devolver el fetch
+    return fetch(event.request);
   }
 
-  // NO cachear API (pero sí hacer el fetch)
-  if (url.pathname.startsWith('/api') || url.pathname.includes('/devVentas/')) {
-    console.log('[SW] Request API, no cachear:', url.pathname);
-    event.respondWith(fetch(event.request)); // ← FIX: Hacer el fetch
+  // NO cachear API ni landings públicas dinámicas
+  if (url.pathname.startsWith('/api') || url.pathname.startsWith('/box/')) {
+    event.respondWith(fetch(event.request));
     return;
   }
 

@@ -62,14 +62,40 @@ class ApiClient {
     const baseUrl = this.useProxy ? PROXY_URL : this.directUrl;
     
     // Headers base optimizados
+    const tenantHost =
+      typeof window !== "undefined"
+        ? localStorage.getItem("tenant_host") || window.location.hostname
+        : "localhost";
+    const tenantId =
+      typeof window !== "undefined"
+        ? localStorage.getItem("tenant_id")
+        : null;
+    const tenantSlug =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("box") ||
+          localStorage.getItem("tenant_slug")
+        : null;
+
+    if (typeof window !== "undefined" && tenantSlug) {
+      localStorage.setItem("tenant_slug", tenantSlug);
+    }
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "Accept": "application/json",
+      "X-Tenant-Host": tenantHost,
       // Anti-cache headers para atravesar proxies corporativos
       "Cache-Control": "no-cache, no-store, must-revalidate",
       "Pragma": "no-cache",
       "Expires": "0"
     };
+
+    if (tenantId) {
+      headers["X-Tenant-Id"] = tenantId;
+    }
+    if (tenantSlug) {
+      headers["X-Tenant-Slug"] = tenantSlug;
+    }
 
     if (options.headers) {
       Object.assign(headers, options.headers);
@@ -83,6 +109,7 @@ class ApiClient {
       const response = await fetch(`${baseUrl}${endpoint}`, {
         ...options,
         headers,
+        cache: "no-store",
       });
 
       // Si nos da 415 o error de servidor en modo directo, podría ser el firewall
@@ -151,14 +178,38 @@ class ApiClient {
     }
   }
 
+  private syncTenantFromResponse(tenant?: any) {
+    if (typeof window === "undefined" || !tenant) return;
+    try {
+      if (tenant.id) {
+        localStorage.setItem("tenant_id", String(tenant.id));
+      }
+      if (tenant.slug) {
+        localStorage.setItem("tenant_slug", String(tenant.slug));
+      }
+      const cfg = tenant.configuracion || {};
+      localStorage.setItem(
+        "tenant_branding",
+        JSON.stringify({
+          nombre: tenant.nombre || "Gimnasio",
+          logo_url: cfg.logo_url || tenant.logo_url || "/logo.jpeg",
+          color_primario: tenant.color_primario || cfg.color_primario || "#f97316",
+          tema_modo: cfg.tema_modo === "light" ? "light" : "dark",
+        })
+      );
+      window.dispatchEvent(new Event("tenant-config-updated"));
+    } catch {}
+  }
+
   // Auth
   async login(email: string, password: string) {
-    const data = await this.request<{ user: any; token: string }>("/login", {
+    const data = await this.request<{ user: any; token: string; tenant?: any }>("/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
 
     this.setToken(data.token);
+    this.syncTenantFromResponse(data.tenant);
     return data;
   }
 
@@ -168,7 +219,9 @@ class ApiClient {
   }
 
   async getUser() {
-    return this.request<{ user: any }>("/user");
+    const data = await this.request<{ user: any; tenant?: any }>("/user");
+    this.syncTenantFromResponse(data.tenant);
+    return data;
   }
 
   // Métodos genéricos
@@ -278,11 +331,16 @@ class ApiClient {
   }
 
   async updateInstructor(id: string, data: any) {
-    return this.put<{ message: string; socio: any }>(`/socios/${id}`, data);
+    return this.put<{ message: string; socio: any }>(`/socios/${id}`, {
+      ...data,
+      tipo_persona: "instructor",
+    });
   }
 
   async deleteInstructor(id: string) {
-    return this.delete<{ message: string }>(`/socios/${id}`);
+    return this.delete<{ message: string }>(
+      `/socios/${id}?tipo_persona=instructor`
+    );
   }
 
   // Planes (Servicios)
@@ -338,7 +396,12 @@ class ApiClient {
   async createMembresia(data: {
     id_socio: string;
     id_plan: string;
+    id_clase_fija?: string;
     fecha_inicio?: string;
+    registrar_pago?: boolean;
+    metodo_pago?: string;
+    monto_pago?: string | number;
+    observaciones_pago?: string;
   }) {
     return this.post<{ message: string; membresia: any }>("/membresias", data);
   }
@@ -371,6 +434,19 @@ class ApiClient {
     return this.delete<{ message: string }>(`/clases/${id}`);
   }
 
+  async inscribirAlumnoFijo(claseId: string, alumnoId: string) {
+    return this.post<{ message: string; clase: any }>(
+      `/clases/${claseId}/inscripciones`,
+      { alumno_id: alumnoId }
+    );
+  }
+
+  async desinscribirAlumnoFijo(claseId: string, alumnoId: string) {
+    return this.delete<{ message: string; clase: any }>(
+      `/clases/${claseId}/inscripciones/${alumnoId}`
+    );
+  }
+
   async getInstructorStats(instructorId: string, startDate: string, endDate: string) {
     const params = new URLSearchParams({
         instructor_id: instructorId,
@@ -394,7 +470,10 @@ class ApiClient {
   async createReserva(data: {
     id_clase_gym: string;
     fecha_reserva: string;
+    turno_id?: number | string;
     id_persona?: string;
+    baja_fijo?: boolean;
+    accion?: "confirmar" | "no_asisto";
   }) {
     return this.post<{ message: string; reserva: any }>("/reservas", data);
   }
@@ -416,7 +495,9 @@ class ApiClient {
   async marcarAsistencia(data: {
     id_persona: string;
     id_clase_gym?: string;
+    turno_id?: number | string;
     id_reserva?: string;
+    fecha?: string;
   }) {
     return this.post<{ message: string; asistencia: any }>(
       "/asistencias",
@@ -533,6 +614,266 @@ class ApiClient {
       instructores: { name: string; classes: number }[];
     }>("/dashboard/stats");
   }
+
+  // ─── Módulo 5: Entrenamiento, Planificación (Kanban), Ejercicios y RMs ──────
+
+  async getTableroEntrenamiento() {
+    return this.get<{
+      planes: any[];
+      semanas: any[];
+      ejercicios: any[];
+    }>("/entrenamiento/tablero");
+  }
+
+  async getPlanesEntrenamiento() {
+    return this.get<{ planes: any[] }>("/entrenamiento/planes");
+  }
+
+  async createPlanEntrenamiento(data: {
+    nombre: string;
+    tipo: "clase" | "personalizado" | "general";
+    grupo_id?: string | null;
+    color?: string;
+    descripcion?: string;
+  }) {
+    return this.post<{ message: string; plan: any }>(
+      "/entrenamiento/planes",
+      data
+    );
+  }
+
+  async updatePlanEntrenamiento(id: string, data: any) {
+    return this.put<{ message: string; plan: any }>(
+      `/entrenamiento/planes/${id}`,
+      data
+    );
+  }
+
+  async deletePlanEntrenamiento(id: string) {
+    return this.delete<{ message: string }>(`/entrenamiento/planes/${id}`);
+  }
+
+  async asignarAlumnoPlan(
+    planId: string,
+    data: { alumno_id: string; fecha_inicio?: string; fecha_fin?: string }
+  ) {
+    return this.post<{ message: string; plan: any }>(
+      `/entrenamiento/planes/${planId}/alumnos`,
+      data
+    );
+  }
+
+  async desasignarAlumnoPlan(planId: string, alumnoId: string) {
+    return this.delete<{ message: string; plan: any }>(
+      `/entrenamiento/planes/${planId}/alumnos/${alumnoId}`
+    );
+  }
+
+  async createSemana(data: {
+    plan_id: string;
+    titulo: string;
+    fecha_inicio?: string;
+    estado?: string;
+  }) {
+    return this.post<{ message: string; semana: any }>(
+      "/entrenamiento/semanas",
+      data
+    );
+  }
+
+  async updateSemana(id: string, data: any) {
+    return this.put<{ message: string; semana: any }>(
+      `/entrenamiento/semanas/${id}`,
+      data
+    );
+  }
+
+  async duplicarSemana(id: string) {
+    return this.post<{ message: string; semana: any }>(
+      `/entrenamiento/semanas/${id}/duplicar`,
+      {}
+    );
+  }
+
+  async deleteSemana(id: string) {
+    return this.delete<{ message: string }>(`/entrenamiento/semanas/${id}`);
+  }
+
+  async updateDia(id: string, data: { contenido?: string; descanso?: boolean }) {
+    return this.put<{ message: string; dia: any }>(
+      `/entrenamiento/dias/${id}`,
+      data
+    );
+  }
+
+  async addLinkDia(diaId: string, data: { titulo: string; url: string }) {
+    return this.post<{ message: string; link: any }>(
+      `/entrenamiento/dias/${diaId}/links`,
+      data
+    );
+  }
+
+  async deleteLinkDia(linkId: string) {
+    return this.delete<{ message: string }>(`/entrenamiento/links/${linkId}`);
+  }
+
+  async toggleProgresoDia(diaId: string, alumnoId?: string) {
+    return this.post<{ message: string; completado: boolean; dia_id: string }>(
+      `/entrenamiento/dias/${diaId}/progreso`,
+      alumnoId ? { alumno_id: alumnoId } : {}
+    );
+  }
+
+  async addComentarioDia(
+    diaId: string,
+    data: { texto: string; alumno_id?: string }
+  ) {
+    return this.post<{ message: string; comentario: any }>(
+      `/entrenamiento/dias/${diaId}/comentarios`,
+      data
+    );
+  }
+
+  async getEjercicios() {
+    return this.get<{ ejercicios: any[] }>("/entrenamiento/ejercicios");
+  }
+
+  async createEjercicio(data: {
+    nombre: string;
+    categoria: string;
+    unidad: "kg" | "reps" | "segundos";
+    descripcion?: string;
+    video_url?: string;
+  }) {
+    return this.post<{ message: string; ejercicio: any }>(
+      "/entrenamiento/ejercicios",
+      data
+    );
+  }
+
+  async deleteEjercicio(id: string) {
+    return this.delete<{ message: string }>(`/entrenamiento/ejercicios/${id}`);
+  }
+
+  async getRms(alumnoId?: string) {
+    const query = alumnoId ? `?alumno_id=${alumnoId}` : "";
+    return this.get<{ rms: any[] }>(`/entrenamiento/rms${query}`);
+  }
+
+  async createRm(data: {
+    alumno_id?: string;
+    ejercicio_id?: string;
+    ejercicio_nombre?: string;
+    ejercicio?: string;
+    categoria?: string;
+    unidad?: "kg" | "reps" | "segundos";
+    kg: number;
+    fecha?: string;
+  }) {
+    return this.post<{ message: string; rm: any }>("/entrenamiento/rms", data);
+  }
+
+  async updateRm(
+    id: string,
+    data: {
+      ejercicio_id?: string;
+      ejercicio_nombre?: string;
+      ejercicio?: string;
+      categoria?: string;
+      unidad?: "kg" | "reps" | "segundos";
+      kg: number;
+      fecha?: string;
+    }
+  ) {
+    return this.put<{ message: string; rm: any }>(
+      `/entrenamiento/rms/${id}`,
+      data
+    );
+  }
+
+  async deleteRm(id: string) {
+    return this.delete<{ message: string }>(`/entrenamiento/rms/${id}`);
+  }
+
+  async getMiPlanEntrenamiento(alumnoId?: string) {
+    const query = alumnoId ? `?alumno_id=${alumnoId}` : "";
+    return this.get<{
+      alumno: any;
+      planes: any[];
+      semanas: any[];
+      rms: any[];
+      progreso_dias: string[];
+    }>(`/entrenamiento/mi-plan${query}`);
+  }
+
+  // Configuración del Gimnasio (Tenant)
+  async getTenantConfig() {
+    return this.get<{ tenant: any }>("/tenant/config");
+  }
+
+  async updateTenantConfig(data: {
+    nombre?: string;
+    logo_url?: string | null;
+    color_primario?: string;
+    modulos?: Record<string, boolean>;
+    configuracion?: Record<string, any>;
+  }) {
+    return this.put<{ message: string; tenant: any }>("/tenant/config", data);
+  }
+
+  // SuperAdmin - Gestión de Boxes / Tenants
+  async getSuperAdminTenants(superadminKey: string) {
+    return this.request<{ tenants: any[] }>("/superadmin/tenants", {
+      method: "GET",
+      headers: { "X-Superadmin-Key": superadminKey },
+    });
+  }
+
+  async createSuperAdminTenant(superadminKey: string, data: Record<string, any>) {
+    return this.request<{ message: string; tenant: any; admin: any }>("/superadmin/tenants", {
+      method: "POST",
+      headers: { "X-Superadmin-Key": superadminKey },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSuperAdminTenant(superadminKey: string, id: string, data: Record<string, any>) {
+    return this.request<{ message: string; tenant: any }>(`/superadmin/tenants/${id}`, {
+      method: "PUT",
+      headers: { "X-Superadmin-Key": superadminKey },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async toggleSuperAdminTenant(superadminKey: string, id: string) {
+    return this.request<{ message: string; activo: boolean }>(`/superadmin/tenants/${id}/toggle`, {
+      method: "PATCH",
+      headers: { "X-Superadmin-Key": superadminKey },
+    });
+  }
+
+  // Rutas Públicas (Landing Page del Box)
+  async getPublicBoxData(slug: string) {
+    return this.request<{ tenant: any; planes: any[]; clases: any[] }>(`/public/box/${slug}`, {
+      method: "GET",
+    });
+  }
+
+  async registerBoxLead(slug: string, data: {
+    nombre: string;
+    apellido?: string;
+    email: string;
+    telefono: string;
+    objetivo?: string;
+    plan_interes?: string;
+    mensaje?: string;
+  }) {
+    return this.request<{ message: string; ya_registrado?: boolean; prospecto_id?: number }>(`/public/box/${slug}/registro`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const api = new ApiClient(API_URL);
+

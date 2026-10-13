@@ -46,8 +46,9 @@ export function PlanDialog({
     if (plan) {
       // Determine type based on existing data
       let tipo: "fecha" | "creditos" = "fecha";
-      if (plan.creditos && plan.creditos > 0) tipo = "creditos";
-      if (plan.duracion_dias && plan.duracion_dias > 0) tipo = "fecha";
+      if (plan.creditos && plan.creditos > 0) {
+        tipo = "creditos";
+      }
 
       setFormData({
         nombre: plan.nombre,

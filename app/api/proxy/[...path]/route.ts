@@ -13,11 +13,19 @@ async function proxyRequest(request: NextRequest, { params }: { params: { path: 
   try {
     const headers = new Headers(request.headers);
     
+    const incomingHost =
+      request.headers.get("x-tenant-host") ||
+      request.headers.get("host")?.split(":")[0] ||
+      "localhost";
+
     // Limpiar headers problemáticos que podrían revelar el proxy o causar bloqueos
     headers.delete("host");
     headers.delete("connection");
     headers.delete("referer");
     headers.delete("origin");
+
+    // Inyectar host del tenant
+    headers.set("X-Tenant-Host", incomingHost);
     
     // Asegurar que aceptamos JSON
     headers.set("Accept", "application/json"); 
@@ -45,8 +53,8 @@ async function proxyRequest(request: NextRequest, { params }: { params: { path: 
 
     // Asegurar CORS permisivo en la respuesta del proxy
     resHeaders.set("Access-Control-Allow-Origin", "*");
-    resHeaders.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    resHeaders.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    resHeaders.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    resHeaders.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Tenant-Host, X-Tenant-Id, X-Tenant-Slug, X-Superadmin-Key");
 
     // Intentar parsear JSON si es posible para asegurar validez
     try {
@@ -84,6 +92,10 @@ export async function PUT(request: NextRequest, context: any) {
   return proxyRequest(request, context);
 }
 
+export async function PATCH(request: NextRequest, context: any) {
+  return proxyRequest(request, context);
+}
+
 export async function DELETE(request: NextRequest, context: any) {
   return proxyRequest(request, context);
 }
@@ -92,8 +104,8 @@ export async function OPTIONS(request: NextRequest) {
     return NextResponse.json({}, {
         headers: {
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, X-Tenant-Host, X-Tenant-Id, X-Tenant-Slug, X-Superadmin-Key",
         },
     });
 }
