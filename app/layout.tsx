@@ -45,7 +45,12 @@ export const metadata: Metadata = {
         type: "image/svg+xml",
       },
     ],
-    apple: "/logo.jpeg",
+    apple: "/icon.svg",
+  },
+  openGraph: {
+    title: "DevGym | Gestión y Entrenamiento para Gimnasios y Boxes",
+    description: "Plataforma integral de gestión, reservas y entrenamientos para Boxes y Gimnasios.",
+    type: "website",
   },
 };
 
