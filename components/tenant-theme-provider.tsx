@@ -59,7 +59,7 @@ export function TenantThemeProvider() {
         const branding = {
           id: tenant.id,
           nombre: tenant.nombre || "Gimnasio",
-          logo_url: cfg.logo_url || tenant.logo_url || "/logo.jpeg",
+          logo_url: cfg.logo_url || tenant.logo_url || "",
           color_primario:
             tenant.color_primario || cfg.color_primario || "#f97316",
           tema_modo: (cfg.tema_modo as "dark" | "light") || "dark",

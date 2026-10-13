@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Dumbbell } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -147,12 +147,16 @@ export function AppHeader({
     <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
       <div className="flex h-16 items-center justify-between px-4">
         <Link href={homeHref} className="flex items-center gap-2 min-w-0">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary overflow-hidden">
-            <img
-              src={brandLogo || "/logo.jpeg"}
-              alt={brandName}
-              className="h-10 w-10 rounded-lg object-cover"
-            />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground overflow-hidden">
+            {brandLogo && brandLogo !== "/logo.jpeg" ? (
+              <img
+                src={brandLogo}
+                alt={brandName}
+                className="h-10 w-10 rounded-lg object-cover"
+              />
+            ) : (
+              <Dumbbell className="h-5 w-5" />
+            )}
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-lg font-bold text-foreground truncate">

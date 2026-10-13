@@ -462,7 +462,17 @@ export default function PublicBoxLandingPage() {
           <div className="flex items-center gap-2">
             <span className="font-semibold text-foreground">{tenant.nombre}</span>
             <span>·</span>
-            <span>Potenciado por DevGym SaaS</span>
+            <span>
+              Potenciado por{" "}
+              <a
+                href="https://devsign.ar"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-foreground hover:text-primary transition-colors hover:underline"
+              >
+                devsign.ar
+              </a>
+            </span>
           </div>
 
           <div className="flex items-center gap-4">

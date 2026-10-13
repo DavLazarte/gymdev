@@ -182,7 +182,7 @@ export default function ConfiguracionPage() {
         savedTenant?.configuracion?.logo_url ||
         savedTenant?.logo_url ||
         gymData.logo_url ||
-        "/logo.jpeg"
+        ""
       const finalColor =
         savedTenant?.color_primario ||
         savedTenant?.configuracion?.color_primario ||
