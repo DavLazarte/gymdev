@@ -70,11 +70,19 @@ export default function PublicBoxLandingPage() {
 
       // Aplicar dinámicamente colores y modo del Box
       if (t) {
-        applyTenantThemeToDom({
+        const branding = {
+          id: t.id,
           nombre: t.nombre,
-          color_primario: t.color_primario || "#f97316",
-          tema_modo: t.tema_modo || "dark",
-        })
+          logo_url: t.logo_url || "",
+          color_primario: t.color_primario || "#ef4444",
+          tema_modo: (t.tema_modo as "dark" | "light") || "dark",
+        }
+        try {
+          localStorage.setItem("tenant_branding", JSON.stringify(branding))
+          localStorage.setItem("tenant_slug", t.slug || slug)
+          localStorage.setItem("tenant_id", String(t.id))
+        } catch {}
+        applyTenantThemeToDom(branding)
       }
     } catch (error: any) {
       toast({

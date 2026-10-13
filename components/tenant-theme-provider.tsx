@@ -50,6 +50,12 @@ export function TenantThemeProvider() {
 
     syncFromStorage();
 
+    // Si estamos en la landing de un box (/box/[slug]), NO ejecutar getTenantConfig() genérico
+    // para no pisar el color del box con el gimnasio por defecto.
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/box/")) {
+      return;
+    }
+
     api
       .getTenantConfig()
       .then((res: any) => {

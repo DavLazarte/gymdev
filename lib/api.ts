@@ -70,14 +70,21 @@ class ApiClient {
       typeof window !== "undefined"
         ? localStorage.getItem("tenant_id")
         : null;
-    const tenantSlug =
-      typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search).get("box") ||
-          localStorage.getItem("tenant_slug")
-        : null;
+    let tenantSlug: string | null = null;
+    if (typeof window !== "undefined") {
+      const queryBox = new URLSearchParams(window.location.search).get("box");
+      const pathMatch = window.location.pathname.match(/^\/box\/([^\/]+)/);
+      const pathBox = pathMatch ? pathMatch[1] : null;
 
-    if (typeof window !== "undefined" && tenantSlug) {
-      localStorage.setItem("tenant_slug", tenantSlug);
+      tenantSlug =
+        queryBox ||
+        pathBox ||
+        localStorage.getItem("tenant_slug") ||
+        null;
+
+      if (tenantSlug) {
+        localStorage.setItem("tenant_slug", tenantSlug);
+      }
     }
 
     const headers: Record<string, string> = {
