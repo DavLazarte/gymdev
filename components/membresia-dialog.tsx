@@ -26,6 +26,7 @@ import type { Membresia, Socio, Plan, Clase } from "@/lib/types";
 import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Separator } from "@/components/ui/separator";
+import { getLocalToday, parseLocalDate } from "@/lib/utils";
 
 interface MembresiaDialogProps {
   open: boolean;
@@ -52,7 +53,7 @@ export function MembresiaDialog({
     id_socio: "",
     id_plan: "",
     id_clase_fija: "ninguna",
-    fecha_inicio: format(new Date(), "yyyy-MM-dd"),
+    fecha_inicio: getLocalToday(),
     // Campos de pago
     registrar_pago: false,
     metodo_pago: "efectivo",
@@ -85,8 +86,8 @@ export function MembresiaDialog({
         id_plan: membresia.idservicio ? String(membresia.idservicio) : "",
         id_clase_fija: "ninguna",
         fecha_inicio: membresia.fecha_inicio
-          ? format(new Date(membresia.fecha_inicio), "yyyy-MM-dd")
-          : format(new Date(), "yyyy-MM-dd"),
+          ? String(membresia.fecha_inicio).slice(0, 10)
+          : getLocalToday(),
         registrar_pago: false,
         metodo_pago: "efectivo",
         monto_pago: "",
@@ -97,7 +98,7 @@ export function MembresiaDialog({
         id_socio: initialSocioId || "",
         id_plan: "",
         id_clase_fija: "ninguna",
-        fecha_inicio: format(new Date(), "yyyy-MM-dd"),
+        fecha_inicio: getLocalToday(),
         registrar_pago: false,
         metodo_pago: "efectivo",
         monto_pago: "",
@@ -176,7 +177,7 @@ export function MembresiaDialog({
 
     if (selectedPlan.duracion_dias) {
       const fin = addDays(
-        new Date(formData.fecha_inicio),
+        parseLocalDate(formData.fecha_inicio),
         selectedPlan.duracion_dias,
       );
       resume += `Vencerá el ${format(fin, "PPPP", {

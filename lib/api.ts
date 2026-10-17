@@ -361,6 +361,10 @@ class ApiClient {
     return response.servicios;
   }
 
+  async getServicios(search?: string) {
+    return this.getPlanes(search);
+  }
+
   async createPlan(data: any) {
     return this.post<{ message: string; servicio: any }>("/servicios", {
       ...data,
@@ -475,10 +479,12 @@ class ApiClient {
   }
 
   async createReserva(data: {
-    id_clase_gym: string;
+    id_clase_gym?: string;
+    clase_id?: string;
     fecha_reserva: string;
     turno_id?: number | string;
     id_persona?: string;
+    socio_id?: string;
     baja_fijo?: boolean;
     accion?: "confirmar" | "no_asisto";
   }) {
@@ -500,11 +506,15 @@ class ApiClient {
   }
 
   async marcarAsistencia(data: {
-    id_persona: string;
-    id_clase_gym?: string;
+    id_persona: string | number;
+    socio_id?: string;
+    id_clase_gym?: string | number | null;
+    clase_id?: string;
     turno_id?: number | string;
     id_reserva?: string;
     fecha?: string;
+    fecha_asistencia?: string;
+    hora_entrada?: string;
   }) {
     return this.post<{ message: string; asistencia: any }>(
       "/asistencias",
@@ -859,6 +869,75 @@ class ApiClient {
     });
   }
 
+  // Pre-venta, Leads y Lista de Espera (Turnos Fijos)
+  async getLeads(params?: {
+    estado?: string;
+    search?: string;
+    grupo_id?: string | number;
+    page?: number;
+    per_page?: number;
+  }) {
+    const q = new URLSearchParams();
+    if (params?.estado && params.estado !== "todos") q.append("estado", params.estado);
+    if (params?.search) q.append("search", params.search);
+    if (params?.grupo_id) q.append("grupo_id", String(params.grupo_id));
+    if (params?.page) q.append("page", String(params.page));
+    if (params?.per_page) q.append("per_page", String(params.per_page));
+
+    const qs = q.toString() ? `?${q.toString()}` : "";
+    return this.request<{
+      data: any[];
+      stats: {
+        total: number;
+        pendientes: number;
+        contactados: number;
+        espera: number;
+        convertidos: number;
+        descartados: number;
+      };
+      meta: {
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+      };
+    }>(`/leads${qs}`);
+  }
+
+  async updateLead(id: string | number, data: {
+    estado?: string;
+    notas_admin?: string;
+    grupo_id?: string | number;
+    plan_interes_id?: string | number;
+  }) {
+    return this.request<{ message: string; lead: any }>(`/leads/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async convertLead(id: string | number, data: {
+    tipo_membresia_id?: string | number;
+    grupo_id?: string | number;
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    registrar_pago?: boolean;
+    metodo_pago?: string;
+    monto_pago?: number;
+    notas_admin?: string;
+  }) {
+    return this.request<{ message: string; lead: any; alumno: any; membresia?: any }>(`/leads/${id}/convertir`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteLead(id: string | number) {
+    return this.request<{ message: string }>(`/leads/${id}`, {
+      method: "DELETE",
+    });
+  }
+
   // Rutas Públicas (Landing Page del Box)
   async getPublicBoxData(slug: string) {
     return this.request<{ tenant: any; planes: any[]; clases: any[] }>(`/public/box/${slug}`, {
@@ -871,11 +950,21 @@ class ApiClient {
     apellido?: string;
     email: string;
     telefono: string;
+    grupo_id?: string | number;
+    clase_id?: string | number;
+    plan_interes_id?: string | number;
     objetivo?: string;
     plan_interes?: string;
     mensaje?: string;
   }) {
-    return this.request<{ message: string; ya_registrado?: boolean; prospecto_id?: number }>(`/public/box/${slug}/registro`, {
+    return this.request<{
+      message: string;
+      lead_id?: number;
+      estado?: string;
+      es_lista_espera?: boolean;
+      ya_registrado?: boolean;
+      prospecto_id?: number;
+    }>(`/public/box/${slug}/registro`, {
       method: "POST",
       body: JSON.stringify(data),
     });

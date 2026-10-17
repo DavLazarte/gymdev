@@ -397,8 +397,8 @@ export function ClaseDialog({
             <Label htmlFor="estado">Estado *</Label>
             <Select
               value={formData.estado}
-              onValueChange={(value: Clase["estado"]) =>
-                setFormData({ ...formData, estado: value })
+              onValueChange={(value: string) =>
+                setFormData({ ...formData, estado: value as Clase["estado"] })
               }
             >
               <SelectTrigger id="estado">

@@ -43,16 +43,39 @@ export default function PublicBoxLandingPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [submitResult, setSubmitResult] = useState<{
+    message?: string
+    es_lista_espera?: boolean
+    ya_registrado?: boolean
+  } | null>(null)
 
   const [formData, setFormData] = useState({
     nombre: "",
     apellido: "",
     email: "",
     telefono: "",
-    objetivo: "Acondicionamiento Físico",
-    plan_interes: "",
+    grupo_id: "",
+    plan_interes_id: "",
     mensaje: "",
   })
+
+  const formatDias = (dias?: string) => {
+    if (!dias) return ""
+    const map: Record<string, string> = {
+      "1": "Lun",
+      "2": "Mar",
+      "3": "Mié",
+      "4": "Jue",
+      "5": "Vie",
+      "6": "Sáb",
+      "0": "Dom",
+      "7": "Dom",
+    }
+    return dias
+      .split(",")
+      .map((d) => map[d.trim()] || d.trim())
+      .join(", ")
+  }
 
   useEffect(() => {
     if (!slug) return
@@ -108,10 +131,25 @@ export default function PublicBoxLandingPage() {
 
     try {
       setIsSubmitting(true)
-      const res = await api.registerBoxLead(slug, formData)
+      const payload: any = {
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        email: formData.email,
+        telefono: formData.telefono,
+        mensaje: formData.mensaje,
+      }
+      if (formData.grupo_id && formData.grupo_id !== "otro") {
+        payload.grupo_id = formData.grupo_id
+      }
+      if (formData.plan_interes_id) {
+        payload.plan_interes_id = formData.plan_interes_id
+      }
+
+      const res = await api.registerBoxLead(slug, payload)
+      setSubmitResult(res)
       setSubmitted(true)
       toast({
-        title: "¡Inscripción recibida!",
+        title: res.es_lista_espera ? "¡Sumado a Lista de Espera!" : "¡Inscripción recibida!",
         description: res.message || "Te contactaremos a la brevedad.",
       })
     } catch (error: any) {
@@ -157,6 +195,8 @@ export default function PublicBoxLandingPage() {
   const whatsappUrl = cleanPhone
     ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(`¡Hola ${tenant.nombre}! Quiero consultar para empezar a entrenar.`)}`
     : null
+
+  const selectedClase = clases.find((c) => String(c.id) === String(formData.grupo_id))
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-primary selection:text-primary-foreground overflow-x-hidden">
@@ -270,16 +310,39 @@ export default function PublicBoxLandingPage() {
               <CardContent className="p-5 sm:p-6 pt-0 sm:pt-0">
                 {submitted ? (
                   <div className="py-8 text-center space-y-4">
-                    <div className="h-14 w-14 rounded-full bg-primary/15 text-primary flex items-center justify-center mx-auto border border-primary/30">
-                      <CheckCircle2 className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold">¡Solicitud Recibida!</h3>
-                      <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                        Ya registramos tus datos en {tenant.nombre}. Nuestro equipo se pondrá en contacto con vos por WhatsApp.
-                      </p>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => setSubmitted(false)}>
+                    {submitResult?.es_lista_espera ? (
+                      <>
+                        <div className="h-14 w-14 rounded-full bg-amber-500/15 text-amber-500 flex items-center justify-center mx-auto border border-amber-500/30">
+                          <Clock className="h-8 w-8" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-foreground">¡Anotado en Lista de Espera!</h3>
+                          <p className="text-xs text-muted-foreground mt-1.5 max-w-sm mx-auto leading-relaxed">
+                            El horario seleccionado se encuentra temporalmente completo. Ya guardamos tus datos con prioridad y te contactaremos de inmediato por WhatsApp ante la primera vacante.
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="h-14 w-14 rounded-full bg-primary/15 text-primary flex items-center justify-center mx-auto border border-primary/30">
+                          <CheckCircle2 className="h-8 w-8" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-foreground">¡Lugar Pre-reservado!</h3>
+                          <p className="text-xs text-muted-foreground mt-1.5 max-w-sm mx-auto leading-relaxed">
+                            Ya registramos tu interés en {tenant.nombre}. Nuestro equipo se pondrá en contacto con vos por WhatsApp para confirmar tu inscripción y bienvenida.
+                          </p>
+                        </div>
+                      </>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSubmitted(false)
+                        setSubmitResult(null)
+                      }}
+                    >
                       Enviar otra consulta
                     </Button>
                   </div>
@@ -331,28 +394,88 @@ export default function PublicBoxLandingPage() {
                       />
                     </div>
 
-                    <div className="space-y-1">
-                      <Label htmlFor="objetivo" className="text-xs">¿Cuál es tu objetivo principal?</Label>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="grupo_id" className="text-xs font-semibold">
+                          Turno Fijo / Horario de Interés *
+                        </Label>
+                        {selectedClase && (
+                          <span
+                            className={`text-[11px] font-semibold ${
+                              selectedClase.cupos_disponibles > 0
+                                ? "text-emerald-500"
+                                : "text-amber-500"
+                            }`}
+                          >
+                            {selectedClase.cupos_disponibles > 0
+                              ? `${selectedClase.cupos_disponibles} cupos libres`
+                              : "COMPLETO (Lista de espera)"}
+                          </span>
+                        )}
+                      </div>
                       <select
-                        id="objetivo"
-                        className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        value={formData.objetivo}
-                        onChange={(e) => setFormData({ ...formData, objetivo: e.target.value })}
+                        id="grupo_id"
+                        required
+                        className="w-full h-10 rounded-md border border-input bg-background px-3 py-1.5 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        value={formData.grupo_id}
+                        onChange={(e) => setFormData({ ...formData, grupo_id: e.target.value })}
                       >
-                        <option value="Empezar a entrenar / Ponerme en forma">Empezar a entrenar / Ponerme en forma</option>
-                        <option value="Ganar fuerza y masa muscular">Ganar fuerza y masa muscular</option>
-                        <option value="CrossFit / Rendimiento deportivo">CrossFit / Rendimiento deportivo</option>
-                        <option value="Bajar de peso y salud">Bajar de peso y salud</option>
-                        <option value="Quiero conocer el lugar y probar una clase">Quiero conocer el lugar y probar una clase</option>
+                        <option value="">-- Seleccionar horario fijo --</option>
+                        {clases.map((clase) => {
+                          const dias = formatDias(clase.dias_semana)
+                          const hora = clase.hora_inicio ? clase.hora_inicio.slice(0, 5) : ""
+                          const disp = clase.cupos_disponibles ?? 0
+                          const label = `${clase.nombre} · ${dias} ${hora}hs — ${
+                            disp > 0
+                              ? `${disp} ${disp === 1 ? "lugar libre" : "lugares libres"}`
+                              : "[COMPLETO · Lista de Espera]"
+                          }`
+                          return (
+                            <option key={clase.id} value={clase.id}>
+                              {label}
+                            </option>
+                          )
+                        })}
+                        <option value="otro">Consultar otros días / Horarios a convenir</option>
                       </select>
+
+                      {selectedClase && (
+                        <div
+                          className={`p-2.5 rounded-lg border text-xs flex items-start gap-2 transition-all ${
+                            selectedClase.cupos_disponibles > 0
+                              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
+                              : "bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-400"
+                          }`}
+                        >
+                          {selectedClase.cupos_disponibles > 0 ? (
+                            <>
+                              <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-emerald-500" />
+                              <div className="leading-tight">
+                                <span className="font-semibold">¡Lugares disponibles!</span> Quedan{" "}
+                                <strong>{selectedClase.cupos_disponibles} cupos</strong> para{" "}
+                                <em>{selectedClase.nombre}</em> ({formatDias(selectedClase.dias_semana)}{" "}
+                                {selectedClase.hora_inicio?.slice(0, 5)}hs). Al registrarte te aseguramos tu lugar en la preventa.
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+                              <div className="leading-tight">
+                                <span className="font-semibold">Turno completo:</span> Este grupo no tiene cupos libres actualmente. Al registrarte ingresarás a la{" "}
+                                <strong>Lista de Espera prioritaria</strong> y serás contactado ante cualquier vacante.
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-1">
-                      <Label htmlFor="mensaje" className="text-xs">¿En qué horarios podés entrenar o qué dudas tenés?</Label>
+                      <Label htmlFor="mensaje" className="text-xs">¿Algún comentario o consulta extra?</Label>
                       <Textarea
                         id="mensaje"
                         rows={2}
-                        placeholder="Ej: Puedo entrenar por la mañana / tarde..."
+                        placeholder="Ej: Tengo experiencia previa en CrossFit / Quiero empezar desde cero..."
                         value={formData.mensaje}
                         onChange={(e) => setFormData({ ...formData, mensaje: e.target.value })}
                       />
@@ -364,8 +487,10 @@ export default function PublicBoxLandingPage() {
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Enviando solicitud...
                         </>
+                      ) : selectedClase?.cupos_disponibles === 0 ? (
+                        "Anotarme en Lista de Espera"
                       ) : (
-                        "Enviar Solicitud"
+                        "Pre-inscribirme en este Turno"
                       )}
                     </Button>
                   </form>
@@ -437,25 +562,61 @@ export default function PublicBoxLandingPage() {
           </div>
 
           <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {clases.map((clase) => (
-              <div key={clase.id} className="rounded-xl border border-border bg-card p-4 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-semibold text-sm text-foreground truncate">{clase.nombre}</h3>
-                  <Badge variant="secondary" className="text-[10px] capitalize shrink-0">
-                    {clase.modalidad || "Grupo"}
-                  </Badge>
-                </div>
-                {clase.descripcion && (
-                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{clase.descripcion}</p>
-                )}
-                {clase.hora_inicio && (
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
-                    <Clock className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <span>{clase.hora_inicio.slice(0, 5)} - {clase.hora_fin?.slice(0, 5) || "Fin"}</span>
+            {clases.map((clase) => {
+              const disp = clase.cupos_disponibles ?? 0
+              const dias = formatDias(clase.dias_semana)
+              return (
+                <div key={clase.id} className="rounded-xl border border-border bg-card p-4 space-y-3 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="font-semibold text-sm text-foreground truncate">{clase.nombre}</h3>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] shrink-0 font-medium ${
+                          disp > 0
+                            ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
+                            : "border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10"
+                        }`}
+                      >
+                        {disp > 0 ? `${disp} cupos libres` : "Lista de Espera"}
+                      </Badge>
+                    </div>
+                    {clase.descripcion && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{clase.descripcion}</p>
+                    )}
+                    <div className="space-y-1 text-xs text-muted-foreground pt-1">
+                      {dias && (
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <span>{dias}</span>
+                        </div>
+                      )}
+                      {clase.hora_inicio && (
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <span>{clase.hora_inicio.slice(0, 5)} - {clase.hora_fin?.slice(0, 5) || "Fin"}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs"
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        grupo_id: String(clase.id),
+                      }))
+                      const el = document.getElementById("inscribirme")
+                      el?.scrollIntoView({ behavior: "smooth" })
+                    }}
+                  >
+                    {disp > 0 ? "Anotarme a este turno ↗" : "Sumarme a Lista de Espera ↗"}
+                  </Button>
+                </div>
+              )
+            })}
           </div>
         </section>
       )}

@@ -11,6 +11,7 @@ import { ChevronLeft, Search, CheckCircle2, Calendar, Loader2 } from "lucide-rea
 import { useRequireRole } from "@/hooks/useRequireRole"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api"
+import { getLocalToday } from "@/lib/utils"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 
@@ -74,14 +75,14 @@ export default function RegisterAttendancePage() {
     if (!client) return
     try {
       setIsSubmitting(true)
-      const claseId = selectedClass && selectedClass !== "free" ? Number(selectedClass) : null
+      const claseId = selectedClass && selectedClass !== "free" ? String(selectedClass) : undefined
       await api.marcarAsistencia({
-        id_persona: Number(client.id),
+        id_persona: String(client.id),
         socio_id: String(client.id),
         id_clase_gym: claseId,
-        clase_id: claseId ? String(claseId) : undefined,
-        fecha: new Date().toISOString().split("T")[0],
-        fecha_asistencia: new Date().toISOString().split("T")[0],
+        clase_id: claseId,
+        fecha: getLocalToday(),
+        fecha_asistencia: getLocalToday(),
       })
       setSuccess(true)
       toast({

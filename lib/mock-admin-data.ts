@@ -82,6 +82,7 @@ export const mockPlanes: Plan[] = [
     duracionTipo: "meses",
     beneficios: ["Acceso ilimitado", "Todas las clases", "Vestuario"],
     activo: true,
+    estado: true,
   },
   {
     id: "2",
@@ -93,6 +94,7 @@ export const mockPlanes: Plan[] = [
     beneficios: ["Acceso ilimitado", "Todas las clases", "Vestuario", "1 sesión personal trainer"],
     activo: true,
     popular: true,
+    estado: true,
   },
   {
     id: "3",
@@ -109,6 +111,7 @@ export const mockPlanes: Plan[] = [
       "Nutricionista gratis",
     ],
     activo: true,
+    estado: true,
   },
 ]
 
@@ -116,6 +119,12 @@ export const mockClases: Clase[] = [
   {
     id: "1",
     nombre: "CrossFit",
+    id_coach: "1",
+    dias_semana: "Lunes,Miércoles,Viernes",
+    hora_inicio: "18:00",
+    hora_fin: "19:00",
+    duracion_minutos: 60,
+    cupo_maximo: 20,
     instructorId: "1",
     instructorNombre: "Carlos Ruiz",
     diaSemana: ["Lunes", "Miércoles", "Viernes"],
@@ -129,6 +138,12 @@ export const mockClases: Clase[] = [
   {
     id: "2",
     nombre: "Yoga",
+    id_coach: "2",
+    dias_semana: "Martes,Jueves",
+    hora_inicio: "10:00",
+    hora_fin: "11:00",
+    duracion_minutos: 60,
+    cupo_maximo: 15,
     instructorId: "2",
     instructorNombre: "Ana Martínez",
     diaSemana: ["Martes", "Jueves"],
@@ -193,6 +208,7 @@ export const mockPagos: Pago[] = [
     id: "1",
     socioId: "1",
     socioNombre: "Carlos Martínez",
+    id_membresia: "1",
     concepto: "Membresía Mensual - Enero 2025",
     monto: 45,
     metodoPago: "tarjeta",
@@ -203,6 +219,7 @@ export const mockPagos: Pago[] = [
     id: "2",
     socioId: "2",
     socioNombre: "Ana García",
+    id_membresia: "2",
     concepto: "Membresía Trimestral",
     monto: 120,
     metodoPago: "transferencia",

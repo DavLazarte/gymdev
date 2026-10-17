@@ -45,17 +45,19 @@ export function SocioDetailDialog({
   if (!socio) return null;
 
   const getEstadoBadge = (estado: Socio["estado"]) => {
-    const variants = {
+    const variants: Record<string, any> = {
       activo: "default",
       inactivo: "secondary",
       vencido: "destructive",
+      prospecto: "outline",
     };
-    const labels = {
+    const labels: Record<string, string> = {
       activo: "Activo",
       inactivo: "Inactivo",
       vencido: "Vencido",
+      prospecto: "Prospecto / Lead",
     };
-    return <Badge variant={variants[estado] as any}>{labels[estado]}</Badge>;
+    return <Badge variant={variants[estado] || "secondary"}>{labels[estado] || estado}</Badge>;
   };
 
   return (

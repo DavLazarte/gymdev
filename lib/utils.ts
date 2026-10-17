@@ -12,10 +12,19 @@ export function getLocalToday(date: Date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
-export function formatLocalDate(dateStr: string | null | undefined): string {
+export function parseLocalDate(dateStr: string): Date {
+  const parts = dateStr.slice(0, 10).split(/[-/]/).map(Number);
+  if (parts.length < 3) return new Date();
+  return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+export function formatLocalDate(
+  dateStr: string | null | undefined,
+  options?: Intl.DateTimeFormatOptions
+): string {
   if (!dateStr) return "";
   // Split the date string to avoid timezone shifts (new Date("YYYY-MM-DD") treats it as UTC)
-  const parts = dateStr.split(/[-/]/);
+  const parts = dateStr.slice(0, 10).split(/[-/]/);
   if (parts.length < 3) return dateStr;
   
   const year = parseInt(parts[0], 10);
@@ -23,7 +32,7 @@ export function formatLocalDate(dateStr: string | null | undefined): string {
   const day = parseInt(parts[2], 10);
   
   const date = new Date(year, month, day);
-  return date.toLocaleDateString("es-ES", {
+  return date.toLocaleDateString("es-ES", options || {
     day: "2-digit",
     month: "2-digit",
     year: "numeric"

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'devgym-pwa-v2.0.0';
+const CACHE_NAME = 'devgym-pwa-v2.1.0';
 const URLS_TO_CACHE = [
   '/',
   '/manifest.json',

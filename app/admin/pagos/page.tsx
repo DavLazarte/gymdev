@@ -40,6 +40,7 @@ import {
 import { PagoDialog } from "@/components/pago-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
+import { formatLocalDate } from "@/lib/utils";
 import type { Pago } from "@/lib/types";
 
 export default function PagosPage() {
@@ -270,7 +271,7 @@ export default function PagosPage() {
                   <TableRow key={pago.id}>
                     <TableCell>
                       <span className="text-sm text-foreground">
-                        {new Date(pago.fecha_pago).toLocaleDateString("es-ES")}
+                        {formatLocalDate(pago.fecha_pago)}
                       </span>
                     </TableCell>
                     <TableCell>

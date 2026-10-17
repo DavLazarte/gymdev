@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { User, Calendar, CreditCard, DollarSign, FileText } from "lucide-react"
 import type { Membresia } from "@/lib/types"
+import { formatLocalDate } from "@/lib/utils"
 
 interface MembresiaDetailDialogProps {
   open: boolean
@@ -16,18 +17,26 @@ export function MembresiaDetailDialog({ open, onOpenChange, membresia }: Membres
   if (!membresia) return null
 
   const getEstadoBadge = (estado: Membresia["estado"]) => {
-    const variants = {
+    const variants: Record<string, any> = {
       activa: "default",
       vencida: "destructive",
       por_vencer: "secondary",
+      cancelada: "outline",
     }
-    const labels = {
+    const labels: Record<string, string> = {
       activa: "Activa",
       vencida: "Vencida",
       por_vencer: "Por vencer",
+      cancelada: "Cancelada",
     }
-    return <Badge variant={variants[estado] as any}>{labels[estado]}</Badge>
+    return <Badge variant={variants[estado] || "secondary"}>{labels[estado] || estado}</Badge>
   }
+
+  const planNombre = membresia.plan?.nombre || membresia.planNombre || "Membresía"
+  const socioNombre = membresia.socio?.nombre || membresia.socioNombre || "Socio"
+  const fechaInicio = membresia.fecha_inicio || membresia.fechaInicio
+  const fechaVencimiento = membresia.fecha_fin || membresia.fechaVencimiento
+  const monto = membresia.monto_total ?? membresia.monto ?? 0
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -39,7 +48,7 @@ export function MembresiaDetailDialog({ open, onOpenChange, membresia }: Membres
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-foreground">{membresia.planNombre}</h3>
+              <h3 className="text-lg font-semibold text-foreground">{planNombre}</h3>
               <p className="text-sm text-muted-foreground">ID: {membresia.id}</p>
             </div>
             {getEstadoBadge(membresia.estado)}
@@ -52,7 +61,7 @@ export function MembresiaDetailDialog({ open, onOpenChange, membresia }: Membres
               <User className="mt-0.5 h-5 w-5 text-muted-foreground" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-foreground">Socio</p>
-                <p className="text-sm text-muted-foreground">{membresia.socioNombre}</p>
+                <p className="text-sm text-muted-foreground">{socioNombre}</p>
               </div>
             </div>
 
@@ -60,44 +69,50 @@ export function MembresiaDetailDialog({ open, onOpenChange, membresia }: Membres
               <CreditCard className="mt-0.5 h-5 w-5 text-muted-foreground" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-foreground">Plan</p>
-                <p className="text-sm text-muted-foreground">{membresia.planNombre}</p>
+                <p className="text-sm text-muted-foreground">{planNombre}</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <Calendar className="mt-0.5 h-5 w-5 text-muted-foreground" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">Fecha de inicio</p>
-                <p className="text-sm text-muted-foreground">
-                  {new Date(membresia.fechaInicio).toLocaleDateString("es-ES", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
+            {fechaInicio && (
+              <div className="flex items-start gap-3">
+                <Calendar className="mt-0.5 h-5 w-5 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">Fecha de inicio</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatLocalDate(fechaInicio, {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="flex items-start gap-3">
-              <Calendar className="mt-0.5 h-5 w-5 text-muted-foreground" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">Fecha de vencimiento</p>
-                <p className="text-sm text-muted-foreground">
-                  {new Date(membresia.fechaVencimiento).toLocaleDateString("es-ES", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
+            {fechaVencimiento && (
+              <div className="flex items-start gap-3">
+                <Calendar className="mt-0.5 h-5 w-5 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">Fecha de vencimiento</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatLocalDate(fechaVencimiento, {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex items-start gap-3">
               <DollarSign className="mt-0.5 h-5 w-5 text-muted-foreground" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">Monto pagado</p>
-                <p className="text-lg font-bold text-primary">€{membresia.monto}</p>
-                <p className="text-xs text-muted-foreground">Método: {membresia.metodoPago}</p>
+                <p className="text-sm font-medium text-foreground">Monto</p>
+                <p className="text-lg font-bold text-primary">${monto}</p>
+                {membresia.metodoPago && (
+                  <p className="text-xs text-muted-foreground">Método: {membresia.metodoPago}</p>
+                )}
               </div>
             </div>
 

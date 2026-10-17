@@ -730,21 +730,21 @@ export default function EntrenamientosAdminPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
             Entrenamientos y Planificación
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Armá la planificación semanal para tus Clases/Turnos o para Alumnos
             Personalizados
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={openCreatePlan}>
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={openCreatePlan} className="w-full sm:w-auto">
             <Plus className="mr-1.5 h-4 w-4" />
             Nuevo Programa / Grupo
           </Button>
           {selectedPlanId && (
-            <Button onClick={() => setIsCreateSemanaOpen(true)}>
+            <Button onClick={() => setIsCreateSemanaOpen(true)} className="w-full sm:w-auto">
               <Plus className="mr-1.5 h-4 w-4" />
               Nueva Semana
             </Button>
@@ -753,20 +753,26 @@ export default function EntrenamientosAdminPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="kanban" className="gap-2">
-            <Calendar className="h-4 w-4" />
-            Tablero Semanal (Kanban)
-          </TabsTrigger>
-          <TabsTrigger value="programas" className="gap-2">
-            <Users className="h-4 w-4" />
-            Programas y Asignación ({planes.length})
-          </TabsTrigger>
-          <TabsTrigger value="rms" className="gap-2">
-            <Trophy className="h-4 w-4" />
-            RMs de Alumnos
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-1 scrollbar-none">
+          <TabsList className="inline-flex w-full sm:w-auto justify-start sm:justify-center">
+            <TabsTrigger value="kanban" className="gap-2 whitespace-nowrap text-xs sm:text-sm">
+              <Calendar className="h-4 w-4 shrink-0" />
+              <span>Tablero Semanal</span>
+              <span className="hidden sm:inline">(Kanban)</span>
+            </TabsTrigger>
+            <TabsTrigger value="programas" className="gap-2 whitespace-nowrap text-xs sm:text-sm">
+              <Users className="h-4 w-4 shrink-0" />
+              <span>Programas</span>
+              <span className="hidden sm:inline">y Asignación</span>
+              <span>({planes.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="rms" className="gap-2 whitespace-nowrap text-xs sm:text-sm">
+              <Trophy className="h-4 w-4 shrink-0" />
+              <span>RMs</span>
+              <span className="hidden sm:inline">de Alumnos</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* ─── TAB 1: TABLERO KANBAN ────────────────────────────────────────── */}
         <TabsContent value="kanban" className="space-y-5">
@@ -857,7 +863,7 @@ export default function EntrenamientosAdminPage() {
                         }
                       }}
                       className={cn(
-                        "flex min-h-[420px] flex-col rounded-xl border-2 transition-colors",
+                        "flex min-h-[160px] sm:min-h-[420px] flex-col rounded-xl border-2 transition-colors",
                         col.borderClass,
                         dragOverCol === col.id &&
                           "border-primary bg-primary/10"
@@ -1050,7 +1056,7 @@ export default function EntrenamientosAdminPage() {
                       {plan.alumnos_asignados?.length || 0})
                     </Label>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Select
                         value={selectedSocioForPlan[plan.id] || ""}
                         onValueChange={(val) =>
@@ -1060,7 +1066,7 @@ export default function EntrenamientosAdminPage() {
                           }))
                         }
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs flex-1">
                           <SelectValue placeholder="Seleccionar socio para este plan..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -1073,7 +1079,7 @@ export default function EntrenamientosAdminPage() {
                       </Select>
                       <Button
                         size="sm"
-                        className="h-8 text-xs"
+                        className="h-8 text-xs shrink-0 w-full sm:w-auto"
                         onClick={() => handleAssignSocioToPlan(String(plan.id))}
                         disabled={!selectedSocioForPlan[plan.id]}
                       >

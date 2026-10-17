@@ -9,7 +9,7 @@ export interface Socio {
   dni?: string
   planId?: string
   planNombre: string
-  estado: "activo" | "inactivo" | "vencido"
+  estado: "activo" | "inactivo" | "vencido" | "prospecto"
   fechaVencimiento?: string
   fechaInicio?: string
   tieneUsuario?: boolean
@@ -24,11 +24,11 @@ export interface Socio {
 
 export interface Membresia {
   id: string
-  idpersona: string
-  idservicio: string
-  id_local: string
-  tipo: "fecha" | "creditos"
-  fecha_inicio: string
+  idpersona?: string
+  idservicio?: string
+  id_local?: string
+  tipo?: "fecha" | "creditos"
+  fecha_inicio?: string
   fecha_fin?: string
   creditos_totales?: number
   creditos_restantes?: number
@@ -39,6 +39,16 @@ export interface Membresia {
   socio?: Socio
   plan?: Plan
   computed_status?: "activa" | "vencida" | "por_vencer"
+  // Propiedades opcionales de compatibilidad para UI y mocks
+  socioId?: string
+  socioNombre?: string
+  planId?: string
+  planNombre?: string
+  fechaInicio?: string
+  fechaVencimiento?: string
+  monto?: number
+  metodoPago?: string
+  notas?: string
 }
 
 export interface Plan {
@@ -46,8 +56,13 @@ export interface Plan {
   nombre: string
   descripcion: string
   precio: number
-  tipo_servicio: "plan" | "clase" | "servicio_general"
+  tipo_servicio?: "plan" | "clase" | "servicio_general"
   duracion_dias?: number
+  duracion?: number
+  duracionTipo?: string
+  beneficios?: string[]
+  activo?: boolean
+  popular?: boolean
   creditos?: number
   estado: boolean
   // Helper for UI
@@ -60,6 +75,14 @@ export interface Clase {
   modalidad?: "libre" | "fijo"
   idservicio?: string
   id_coach: string
+  instructorId?: string
+  instructorNombre?: string
+  diaSemana?: string[]
+  horaInicio?: string
+  duracion?: number
+  cupoMaximo?: number
+  inscritos?: number
+  descripcion?: string
   dias_semana: string // Comma separated: "Lunes,Miércoles"
   hora_inicio: string
   hora_fin: string
@@ -120,16 +143,28 @@ export interface Asistencia {
 
 export interface Pago {
   id: string
-  socioId: string
-  socioNombre: string
-  id_membresia: string
-  concepto?: string // No longer strictly required if derived or optional
+  socioId?: string
+  socioNombre?: string
+  id_persona?: string
+  id_membresia?: string
+  id_local?: string
+  concepto?: string
   monto: number
-  metodoPago: string
+  metodoPago?: string
+  metodo_pago?: string
   estado?: "pagado" | "pendiente" | "vencido"
-  fecha: string
+  fecha?: string
+  fecha_pago?: string
   observaciones?: string
   comprobante?: string
+  persona?: {
+    nombre: string
+  }
+  membresia?: {
+    plan?: {
+      nombre: string
+    }
+  }
 }
 export interface ClassSlot {
   id: string

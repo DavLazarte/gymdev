@@ -11,6 +11,7 @@ import { ChevronLeft, Search, Calendar, Clock, Users, Loader2, CheckCircle2 } fr
 import { useRequireRole } from "@/hooks/useRequireRole"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api"
+import { getLocalToday } from "@/lib/utils"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 
@@ -74,9 +75,11 @@ export default function ReceptionBookClassPage() {
       const key = `${classItem.id}-${classItem.fecha || ""}`
       setIsBookingId(key)
       await api.createReserva({
-        socio_id: String(client.id),
+        id_clase_gym: String(classItem.id),
         clase_id: String(classItem.id),
-        fecha_reserva: classItem.fecha || new Date().toISOString().split("T")[0],
+        socio_id: String(client.id),
+        id_persona: String(client.id),
+        fecha_reserva: classItem.fecha || getLocalToday(),
       })
       toast({
         title: "Reserva confirmada",

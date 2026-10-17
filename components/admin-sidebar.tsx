@@ -16,6 +16,7 @@ import {
   ChevronRight,
   TrendingDown,
   Dumbbell,
+  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import { useState } from "react";
 
 const adminNavItems = [
   { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/admin/leads", icon: UserPlus, label: "Pre-venta / Leads" },
   { href: "/admin/socios", icon: Users, label: "Socios" },
   { href: "/admin/membresias", icon: CreditCard, label: "Membresías" },
   { href: "/admin/planes", icon: Package, label: "Planes" },

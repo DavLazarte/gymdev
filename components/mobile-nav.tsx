@@ -30,6 +30,7 @@ import {
   Settings,
   TrendingDown,
   Dumbbell,
+  UserPlus,
 } from "lucide-react";
 
 interface MobileNavProps {
@@ -65,6 +66,7 @@ export function MobileNav({ role, isCoach = false }: MobileNavProps) {
 
   const adminMenuItems = [
     { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
+    { href: "/admin/leads", icon: UserPlus, label: "Pre-venta / Leads" },
     { href: "/admin/socios", icon: Users, label: "Socios" },
     { href: "/admin/membresias", icon: CreditCard, label: "Membresías" },
     { href: "/admin/planes", icon: Package, label: "Planes" },
@@ -120,11 +122,11 @@ export function MobileNav({ role, isCoach = false }: MobileNavProps) {
                 <span className="font-medium">Menú</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="h-[80vh]">
+            <SheetContent side="bottom" className="h-[80vh] flex flex-col p-4 sm:p-6">
               <SheetHeader>
                 <SheetTitle>Menú de Administración</SheetTitle>
               </SheetHeader>
-              <div className="mt-6 space-y-1">
+              <div className="mt-4 space-y-1 overflow-y-auto flex-1 pr-1 pb-6">
                 {adminMenuItems.map((item) => {
                   const isActive = pathname === item.href;
                   return (
