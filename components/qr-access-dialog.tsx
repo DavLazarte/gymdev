@@ -196,7 +196,7 @@ export function QrAccessDialog({
               <div className="relative h-60 w-60 sm:h-64 sm:w-64 bg-white flex items-center justify-center rounded-xl overflow-hidden shadow-sm">
                 {qrImageUrl ? (
                   <img
-                    src={qrImageUrl}
+                    src={qrImageUrl || undefined}
                     alt={`QR de acceso para ${gymName}`}
                     className="h-full w-full object-contain"
                   />
@@ -322,7 +322,7 @@ export function QrAccessDialog({
         <div className="flex flex-col items-center my-6">
           <div className="p-6 bg-white rounded-3xl border-4 border-zinc-950 shadow-sm">
             <img
-              src={qrImageUrl}
+              src={qrImageUrl || undefined}
               alt="Código QR de Acceso"
               className="w-72 h-72 object-contain"
             />

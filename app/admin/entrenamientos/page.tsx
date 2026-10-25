@@ -178,10 +178,10 @@ export default function EntrenamientosAdminPage() {
   const loadAll = async () => {
     setIsLoading(true);
     try {
-      const [tableroRes, clasesRes, sociosRes] = await Promise.all([
+      const [tableroRes, clasesRes] = await Promise.all([
         api.getTableroEntrenamiento(),
-        api.getClases(),
-        api.getSocios({ all: true }),
+        api.getClases().catch(() => ({ clases: [] })),
+
       ]);
 
       const planesLoaded = tableroRes.planes || [];
@@ -189,14 +189,14 @@ export default function EntrenamientosAdminPage() {
       setSemanas(tableroRes.semanas || []);
       setEjercicios(tableroRes.ejercicios || []);
       setClases(clasesRes.clases || []);
-      const sociosLoaded = sociosRes.socios || [];
-      setSocios(sociosLoaded);
+
+
 
       if (planesLoaded.length > 0 && !selectedPlanId) {
         setSelectedPlanId(String(planesLoaded[0].id));
       }
-      if (sociosLoaded.length > 0 && !rmSocioId) {
-        setRmSocioId(String(sociosLoaded[0].id));
+      if (false) {
+
       }
     } catch (error: any) {
       console.error("Error cargando entrenamiento:", error);
@@ -216,6 +216,21 @@ export default function EntrenamientosAdminPage() {
       loadRmsSocio(rmSocioId);
     }
   }, [rmSocioId]);
+
+  useEffect(() => {
+    if ((activeTab === "rms" || activeTab === "programas") && socios.length === 0) {
+      api
+        .getSocios({ estado: "activo" })
+        .then((res) => {
+          const list = res.socios || [];
+          setSocios(list);
+          if (list.length > 0 && !rmSocioId) {
+            setRmSocioId(String(list[0].id));
+          }
+        })
+        .catch((err) => console.warn("Error cargando socios:", err));
+    }
+  }, [activeTab]);
 
   const loadRmsSocio = async (socioId: string) => {
     try {

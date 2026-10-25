@@ -270,7 +270,7 @@ class ApiClient {
     if (params?.page) urlParams.append("page", String(params.page));
     
     // If 'all' is true, set a very high per_page to get all records
-    const perPage = params?.all ? 999 : (params?.per_page || 15);
+    const perPage = params?.all ? 100 : (params?.per_page || 15);
     urlParams.append("per_page", String(perPage));
     
     if (params?.tipo_persona) urlParams.append("tipo_persona", params.tipo_persona);
