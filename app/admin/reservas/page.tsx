@@ -17,6 +17,9 @@ import {
   Trash2,
   RefreshCcw,
   RotateCcw,
+  Dumbbell,
+  Users,
+  ExternalLink,
 } from "lucide-react";
 import {
   Dialog,
@@ -29,6 +32,8 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WorkoutContentRenderer } from "@/components/workout-content-renderer";
 
 export default function AdminReservationsPage() {
   const [selectedDate, setSelectedDate] = useState(
@@ -42,6 +47,11 @@ export default function AdminReservationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingSocio, setIsAddingSocio] = useState(false);
   const [isCoach, setIsCoach] = useState(false);
+  const [classViewTab, setClassViewTab] = useState<"asistencia" | "wod">("asistencia");
+  const [filterCoachOnly, setFilterCoachOnly] = useState(false);
+  const [currentUserName, setCurrentUserName] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [tableroData, setTableroData] = useState<any>(null);
   const { toast } = useToast();
 
   const parseDateToLocal = (dateStr: string) => {
@@ -54,6 +64,8 @@ export default function AdminReservationsPage() {
       const raw = localStorage.getItem("auth_user");
       if (raw) {
         const parsed = JSON.parse(raw);
+        setCurrentUserName(parsed?.name || "");
+        setCurrentUserId(String(parsed?.id || ""));
         if (
           parsed?.role_name === "gym_staff" ||
           parsed?.role === "coach" ||
@@ -64,6 +76,48 @@ export default function AdminReservationsPage() {
       }
     } catch {}
   }, []);
+
+  useEffect(() => {
+    api
+      .getTableroEntrenamiento()
+      .then((data) => setTableroData(data))
+      .catch(() => {});
+  }, []);
+
+  const getWodForCurrentClass = () => {
+    if (!tableroData || !selectedClass) return null;
+    const planes = tableroData.planes || [];
+    const semanas = tableroData.semanas || [];
+
+    const plan =
+      planes.find(
+        (p: any) =>
+          p.tipo === "clase" && String(p.grupo_id) === String(selectedClass.clase_id)
+      ) ||
+      planes.find((p: any) => p.tipo === "general") ||
+      planes[0];
+
+    if (!plan) return null;
+
+    const planSemanas = semanas.filter(
+      (s: any) => String(s.plan_id) === String(plan.id)
+    );
+    const semana =
+      planSemanas.find((s: any) => s.estado === "en-curso") ||
+      planSemanas[0];
+
+    if (!semana || !semana.dias) return null;
+
+    const dow = parseDateToLocal(selectedDate).getDay();
+    const dayIdx = dow === 0 ? 0 : Math.min(5, dow - 1);
+    const dia = semana.dias[dayIdx];
+
+    return {
+      plan,
+      semana,
+      dia,
+    };
+  };
 
   useEffect(() => {
     loadData();
@@ -249,6 +303,16 @@ export default function AdminReservationsPage() {
 
   const filteredSocios = allSocios;
 
+  const displayedClasses =
+    !isCoach && filterCoachOnly
+      ? classes.filter(
+          (c) =>
+            (currentUserId && String((c as any).coach_id) === currentUserId) ||
+            (currentUserName &&
+              c.instructor?.toLowerCase().includes(currentUserName.toLowerCase()))
+        )
+      : classes;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -292,16 +356,44 @@ export default function AdminReservationsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {!isCoach && classes.length > 0 && (
+              <div className="flex gap-1.5 p-1 bg-muted rounded-lg text-xs mb-3">
+                <button
+                  type="button"
+                  onClick={() => setFilterCoachOnly(false)}
+                  className={cn(
+                    "flex-1 py-1 px-2 rounded-md font-medium transition-all",
+                    !filterCoachOnly
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Todas ({classes.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterCoachOnly(true)}
+                  className={cn(
+                    "flex-1 py-1 px-2 rounded-md font-medium transition-all",
+                    filterCoachOnly
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Mis Clases
+                </button>
+              </div>
+            )}
             {isLoading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
-            ) : classes.length === 0 ? (
+            ) : displayedClasses.length === 0 ? (
               <p className="text-center py-8 text-sm text-muted-foreground">
                 No hay clases programadas para esta fecha.
               </p>
             ) : (
-              classes.map((slot) => (
+              displayedClasses.map((slot) => (
                 <div
                   key={slot.id}
                   onClick={() => handleSelectClass(slot)}
@@ -333,7 +425,7 @@ export default function AdminReservationsPage() {
         <Card className="lg:col-span-2">
           {selectedClass ? (
             <>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b pb-4">
                 <div>
                   <CardTitle className="text-lg">
                     {selectedClass.nombre}
@@ -350,7 +442,25 @@ export default function AdminReservationsPage() {
                   </p>
                 </div>
 
-                <Dialog>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Tabs
+                    value={classViewTab}
+                    onValueChange={(v: any) => setClassViewTab(v)}
+                  >
+                    <TabsList className="h-9">
+                      <TabsTrigger value="asistencia" className="gap-1.5 text-xs">
+                        <Users className="h-3.5 w-3.5" />
+                        <span>Alumnos ({reservas.length})</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="wod" className="gap-1.5 text-xs">
+                        <Dumbbell className="h-3.5 w-3.5 text-primary" />
+                        <span>WOD de Hoy</span>
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+
+                  {classViewTab === "asistencia" && (
+                    <Dialog>
                   <DialogTrigger asChild>
                     <Button size="sm" className="gap-2">
                       <UserPlus className="h-4 w-4" />
@@ -417,8 +527,11 @@ export default function AdminReservationsPage() {
                     </div>
                   </DialogContent>
                 </Dialog>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-4">
+                {classViewTab === "asistencia" ? (
                 <div className="space-y-4">
                   {reservas.length === 0 ? (
                     <div className="text-center py-12 border rounded-lg border-dashed">
@@ -568,6 +681,91 @@ export default function AdminReservationsPage() {
                     </div>
                   )}
                 </div>
+                ) : (
+                  <div className="space-y-4">
+                    {(() => {
+                      const wodInfo = getWodForCurrentClass();
+                      if (!wodInfo) {
+                        return (
+                          <div className="text-center py-12 border rounded-lg border-dashed">
+                            <Dumbbell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50 animate-pulse" />
+                            <p className="text-sm font-medium text-foreground">
+                              No hay planificación asignada para esta clase hoy
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              El administrador puede cargar el WOD desde la sección Planificación.
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      const { plan, semana, dia } = wodInfo;
+
+                      if (!dia || dia.descanso) {
+                        return (
+                          <div className="rounded-lg border bg-muted/30 py-10 text-center text-sm text-muted-foreground">
+                            🏖️ Hoy es día de descanso programado para este plan ({plan.nombre}).
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-muted/40 border">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="h-3 w-3 rounded-full shrink-0"
+                                style={{ backgroundColor: plan.color || "#f97316" }}
+                              />
+                              <span className="font-semibold text-sm">
+                                {plan.nombre}
+                              </span>
+                              <Badge variant="outline" className="text-[11px]">
+                                Semana {semana.numero} • {dia.nombre}
+                              </Badge>
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              Semana en curso
+                            </span>
+                          </div>
+
+                          {dia.contenido ? (
+                            <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
+                              <WorkoutContentRenderer contenido={dia.contenido} previewMode />
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 border rounded-lg border-dashed text-sm text-muted-foreground">
+                              Aún no se ha redactado el contenido del entrenamiento para este día.
+                            </div>
+                          )}
+
+                          {dia.links && dia.links.length > 0 && (
+                            <div className="space-y-2 border-t pt-3">
+                              <h5 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                                <ExternalLink className="h-3.5 w-3.5 text-primary" />
+                                Videos y Enlaces de Técnica
+                              </h5>
+                              <div className="grid gap-1.5 sm:grid-cols-2">
+                                {dia.links.map((link: any) => (
+                                  <a
+                                    key={link.id}
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center gap-2 p-2 rounded-lg border bg-muted/20 hover:bg-muted/50 text-xs font-medium text-foreground transition-colors truncate"
+                                  >
+                                    <ExternalLink className="h-3.5 w-3.5 text-primary shrink-0" />
+                                    <span className="truncate">{link.titulo}</span>
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
               </CardContent>
             </>
           ) : (

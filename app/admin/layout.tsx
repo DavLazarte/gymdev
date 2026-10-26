@@ -7,6 +7,7 @@ import { useRequireRole } from "@/hooks/useRequireRole";
 
 const COACH_ALLOWED_PATHS = [
   "/admin/reservas",
+  "/admin/entrenamientos",
   "/admin/profile",
 ];
 

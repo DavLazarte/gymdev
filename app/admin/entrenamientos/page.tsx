@@ -67,6 +67,7 @@ import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { WorkoutContentRenderer } from "@/components/workout-content-renderer";
 import { StudentRMsView } from "@/components/student-rms-view";
+import { CoachWorkoutView } from "@/components/coach-workout-view";
 import type { Clase, Socio } from "@/lib/types";
 
 const KANBAN_COLS = [
@@ -106,6 +107,23 @@ export default function EntrenamientosAdminPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("kanban");
   const [isLoading, setIsLoading] = useState(true);
+  const [isCoach, setIsCoach] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("auth_user");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (
+          parsed?.role_name === "gym_staff" ||
+          parsed?.role === "coach" ||
+          parsed?.rol === "coach"
+        ) {
+          setIsCoach(true);
+        }
+      }
+    } catch {}
+  }, []);
 
   const [planes, setPlanes] = useState<any[]>([]);
   const [semanas, setSemanas] = useState<any[]>([]);
@@ -195,9 +213,8 @@ export default function EntrenamientosAdminPage() {
       if (planesLoaded.length > 0 && !selectedPlanId) {
         setSelectedPlanId(String(planesLoaded[0].id));
       }
-      if (false) {
 
-      }
+
     } catch (error: any) {
       console.error("Error cargando entrenamiento:", error);
       toast({
@@ -733,6 +750,16 @@ export default function EntrenamientosAdminPage() {
       ? Math.round(Number(calcPeso) * (1 + Number(calcReps) / 30) * 10) / 10
       : null;
 
+  if (!isLoading && isCoach) {
+    return (
+      <CoachWorkoutView
+        initialPlanes={planes}
+        initialSemanas={semanas}
+        onDataUpdate={loadAll}
+      />
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -754,11 +781,14 @@ export default function EntrenamientosAdminPage() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={openCreatePlan} className="w-full sm:w-auto">
+          {/* Botones Admin */}
+          {true && (
+            <Button variant="outline" onClick={openCreatePlan} className="w-full sm:w-auto">
             <Plus className="mr-1.5 h-4 w-4" />
             Nuevo Programa / Grupo
           </Button>
-          {selectedPlanId && (
+          )}
+          {!isCoach && selectedPlanId && (
             <Button onClick={() => setIsCreateSemanaOpen(true)} className="w-full sm:w-auto">
               <Plus className="mr-1.5 h-4 w-4" />
               Nueva Semana
@@ -872,7 +902,7 @@ export default function EntrenamientosAdminPage() {
                       onDrop={(e) => {
                         e.preventDefault();
                         setDragOverCol(null);
-                        if (draggedSemanaId) {
+                        if (!isCoach && draggedSemanaId) {
                           handleMoveSemanaEstado(draggedSemanaId, col.id);
                           setDraggedSemanaId(null);
                         }
@@ -917,9 +947,9 @@ export default function EntrenamientosAdminPage() {
                             return (
                               <Card
                                 key={semana.id}
-                                draggable
+                                draggable={!isCoach}
                                 onDragStart={() =>
-                                  setDraggedSemanaId(String(semana.id))
+                                  !isCoach && setDraggedSemanaId(String(semana.id))
                                 }
                                 onClick={() => {
                                   setSelectedSemanaId(String(semana.id));
@@ -929,7 +959,9 @@ export default function EntrenamientosAdminPage() {
                               >
                                 <CardContent className="p-3.5">
                                   <div className="flex items-start gap-2">
-                                    <GripVertical className="mt-0.5 h-4 w-4 shrink-0 cursor-grab text-muted-foreground/50" />
+                                    {true && (
+                                      <GripVertical className="mt-0.5 h-4 w-4 shrink-0 cursor-grab text-muted-foreground/50" />
+                                    )}
                                     <div className="min-w-0 flex-1">
                                       <div className="flex items-center justify-between gap-2">
                                         <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -962,7 +994,7 @@ export default function EntrenamientosAdminPage() {
                                           className="flex items-center gap-1"
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          {col.id === "planificacion" && (
+                                          {!isCoach && col.id === "planificacion" && (
                                             <Button
                                               size="sm"
                                               variant="outline"
@@ -978,7 +1010,7 @@ export default function EntrenamientosAdminPage() {
                                               <ArrowRight className="ml-1 h-3 w-3" />
                                             </Button>
                                           )}
-                                          {col.id === "en-curso" && (
+                                          {!isCoach && col.id === "en-curso" && (
                                             <Button
                                               size="sm"
                                               variant="outline"
@@ -1041,15 +1073,16 @@ export default function EntrenamientosAdminPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => openEditPlan(plan)}
+                        onClick={() => !isCoach && openEditPlan(plan)}
+                        className={cn(isCoach && "hidden")}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-destructive"
-                        onClick={() => handleDeletePlan(String(plan.id))}
+                        className={cn("text-destructive", isCoach && "hidden")}
+                        onClick={() => !isCoach && handleDeletePlan(String(plan.id))}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -1071,7 +1104,7 @@ export default function EntrenamientosAdminPage() {
                       {plan.alumnos_asignados?.length || 0})
                     </Label>
 
-                    <div className="flex flex-col sm:flex-row gap-2">
+                    <div className={cn("flex flex-col sm:flex-row gap-2", isCoach && "hidden")}>
                       <Select
                         value={selectedSocioForPlan[plan.id] || ""}
                         onValueChange={(val) =>
@@ -1116,12 +1149,12 @@ export default function EntrenamientosAdminPage() {
                               <button
                                 type="button"
                                 onClick={() =>
-                                  handleRemoveSocioFromPlan(
+                                  !isCoach && handleRemoveSocioFromPlan(
                                     String(plan.id),
                                     String(al.id)
                                   )
                                 }
-                                className="text-muted-foreground hover:text-destructive"
+                                className={cn("text-muted-foreground hover:text-destructive", isCoach && "hidden")}
                               >
                                 ×
                               </button>
@@ -1191,8 +1224,9 @@ export default function EntrenamientosAdminPage() {
                     <div className="space-y-2 pr-6">
                       <Input
                         defaultValue={selectedSemana.titulo}
+                        disabled={isCoach}
                         onBlur={(e) => {
-                          if (e.target.value !== selectedSemana.titulo) {
+                          if (!isCoach && e.target.value !== selectedSemana.titulo) {
                             handleUpdateSemanaHeader(
                               String(selectedSemana.id),
                               { titulo: e.target.value }
@@ -1206,9 +1240,10 @@ export default function EntrenamientosAdminPage() {
                         <Input
                           type="date"
                           defaultValue={selectedSemana.fecha_inicio}
+                          disabled={isCoach}
                           onBlur={(e) => {
                             if (
-                              e.target.value !== selectedSemana.fecha_inicio
+                              !isCoach && e.target.value !== selectedSemana.fecha_inicio
                             ) {
                               handleUpdateSemanaHeader(
                                 String(selectedSemana.id),
@@ -1257,8 +1292,10 @@ export default function EntrenamientosAdminPage() {
                         </Label>
                         <Switch
                           id="switch-descanso"
+                          disabled={isCoach}
                           checked={selectedDia.descanso}
                           onCheckedChange={(val) =>
+                            !isCoach &&
                             handleSaveDia(String(selectedDia.id), {
                               descanso: val,
                             })
@@ -1272,12 +1309,12 @@ export default function EntrenamientosAdminPage() {
                         🏖️ Día marcado como descanso activo.
                       </div>
                     ) : (
-                      <Tabs defaultValue="editar" className="w-full">
+                      <Tabs defaultValue={isCoach ? "preview" : "editar"} className="w-full">
                         <div className="mb-2 flex items-center justify-between">
                           <Label className="text-xs text-muted-foreground">
                             Contenido del día
                           </Label>
-                          <TabsList className="h-8">
+                          <TabsList className={cn("h-8", isCoach && "hidden")}>
                             <TabsTrigger value="editar" className="text-xs">
                               Editar
                             </TabsTrigger>
@@ -1287,7 +1324,7 @@ export default function EntrenamientosAdminPage() {
                           </TabsList>
                         </div>
 
-                        <TabsContent value="editar" className="space-y-2">
+                        <TabsContent value="editar" className={cn("space-y-2", isCoach && "hidden")}>
                           {/* Barra de herramientas Markdown igual a cross-fit-coach-app */}
                           <div className="flex w-fit flex-wrap items-center gap-1 rounded-md bg-secondary/50 p-1">
                             <Button
@@ -1369,7 +1406,8 @@ export default function EntrenamientosAdminPage() {
                             onChange={(e) => setDayContentDraft(e.target.value)}
                             onBlur={() => {
                               if (dayContentDraft !== selectedDia.contenido) {
-                                handleSaveDia(String(selectedDia.id), {
+                                !isCoach &&
+                            handleSaveDia(String(selectedDia.id), {
                                   contenido: dayContentDraft,
                                 });
                               }
@@ -1388,7 +1426,8 @@ export default function EntrenamientosAdminPage() {
                             <Button
                               size="sm"
                               onClick={() =>
-                                handleSaveDia(String(selectedDia.id), {
+                                !isCoach &&
+                            handleSaveDia(String(selectedDia.id), {
                                   contenido: dayContentDraft,
                                 })
                               }
@@ -1418,12 +1457,14 @@ export default function EntrenamientosAdminPage() {
                       <div className="flex gap-2">
                         <Input
                           placeholder="Título (ej. Técnica Snatch)"
+                          
                           value={newLinkTitulo}
                           onChange={(e) => setNewLinkTitulo(e.target.value)}
                           className="h-8 text-xs"
                         />
                         <Input
                           placeholder="https://youtube.com/..."
+                          
                           value={newLinkUrl}
                           onChange={(e) => setNewLinkUrl(e.target.value)}
                           className="h-8 text-xs"
@@ -1434,6 +1475,7 @@ export default function EntrenamientosAdminPage() {
                           variant="outline"
                           className="h-8 text-xs"
                           onClick={handleAddLinkDia}
+                          style={{ display: isCoach ? "none" : undefined }}
                         >
                           <LinkIcon className="mr-1 h-3.5 w-3.5" />
                           Sumar
@@ -1456,7 +1498,7 @@ export default function EntrenamientosAdminPage() {
                           <button
                             type="button"
                             onClick={() => handleDeleteLinkDia(String(l.id))}
-                            className="text-muted-foreground hover:text-destructive"
+                            className={cn("text-muted-foreground hover:text-destructive", isCoach && "hidden")}
                           >
                             Eliminar
                           </button>
@@ -1508,7 +1550,7 @@ export default function EntrenamientosAdminPage() {
                 )}
               </div>
 
-              <div className="flex gap-2 border-t bg-card p-4">
+              <div className={cn("flex gap-2 border-t bg-card p-4", isCoach && "hidden")}>
                 <Button
                   variant="outline"
                   size="sm"

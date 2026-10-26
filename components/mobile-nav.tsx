@@ -56,7 +56,8 @@ export function MobileNav({ role, isCoach = false }: MobileNavProps) {
   ];
 
   const coachNav = [
-    { href: "/admin/reservas", icon: UserCheck, label: "Mis Clases y Presente" },
+    { href: "/admin/reservas", icon: UserCheck, label: "Mis Clases" },
+    { href: "/admin/entrenamientos", icon: Dumbbell, label: "Planificación" },
     { href: "/admin/profile", icon: User, label: "Mi Perfil" },
   ];
 

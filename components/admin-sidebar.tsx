@@ -40,6 +40,7 @@ const adminNavItems = [
 
 const coachNavItems = [
   { href: "/admin/reservas", icon: UserCheck, label: "Mis Clases y Presente" },
+  { href: "/admin/entrenamientos", icon: Dumbbell, label: "Planificación" },
 ];
 
 export function AdminSidebar({ isCoach = false }: { isCoach?: boolean }) {

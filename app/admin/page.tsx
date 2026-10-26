@@ -23,6 +23,7 @@ import {
 import Link from "next/link";
 import { useRequireRole } from "@/hooks/useRequireRole";
 import { api } from "@/lib/api";
+import { DashboardWodCard } from "@/components/dashboard-wod-card";
 
 type DashboardStats = {
   metrics: {
@@ -236,6 +237,9 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* WOD / Rutina del Día (Vista directa para el Admin) */}
+        <DashboardWodCard />
 
         {/* Charts Section */}
         <div className="grid gap-4 md:grid-cols-2">
